@@ -223,11 +223,44 @@ class CardPaymentController extends AbstractController
                 return $this->json(['error' => 'Payment not found'], 404);
             }
 
-            // Mettre à jour le statut selon le callback
-            if ($status === 'success') {
-                $payment->setStatus('success');
+            // Créer un objet operation pour vérifier le statut auprès de FlexPay
+            $operation = new class($orderNumber, $payment->getAmount()) {
+                private $orderNumber;
+                private $amount;
 
-                // Générer un access code pour l'utilisateur
+                public function __construct($orderNumber, $amount) {
+                    $this->orderNumber = $orderNumber;
+                    $this->amount = $amount;
+                }
+
+                public function getOrderNumber() { return $this->orderNumber; }
+                public function getAmount() { return $this->amount; }
+                public function getPhoneNumber() { return 'CARD_PAYMENT'; } // Pour les cartes, pas de numéro de téléphone
+            };
+
+            // Vérifier le statut réel auprès de FlexPay
+            $flexpayResult = $this->flexPayService->checkPaymentStatus($operation);
+
+            $accessCode = null;
+            $isNewPaymentSuccess = false;
+
+            // Mettre à jour le statut basé sur la réponse de FlexPay
+            if (isset($flexpayResult['success']) && $flexpayResult['success'] === true) {
+                if ($payment->getStatus() !== 'success') {
+                    $payment->setStatus('success');
+                    $isNewPaymentSuccess = true;
+                }
+            } elseif (isset($flexpayResult['success']) && $flexpayResult['success'] === false) {
+                if ($payment->getStatus() !== 'failed') {
+                    $payment->setStatus('failed');
+                }
+            }
+            // Si FlexPay indique que c'est en attente, on ne change pas le statut
+
+            $this->entityManager->flush();
+
+            // Générer un access code pour l'utilisateur si le paiement vient de réussir
+            if ($isNewPaymentSuccess) {
                 $user = $payment->getUser();
                 $existingAccessCode = $this->entityManager->getRepository(\App\Entity\AccessCode::class)->findOneBy([
                     'user' => $user,
@@ -235,19 +268,32 @@ class CardPaymentController extends AbstractController
                 ], ['expiresAt' => 'DESC']);
 
                 if (!$existingAccessCode || !$existingAccessCode->isValid()) {
-                    $this->accessCodeService->createAccessCodeForUser($user);
+                    $accessCode = $this->accessCodeService->createAccessCodeForUser($user);
+                } else {
+                    $accessCode = $existingAccessCode;
                 }
-            } elseif ($status === 'failed' || $status === 'cancelled') {
-                $payment->setStatus('failed');
             }
 
-            $this->entityManager->flush();
-
-            return $this->json([
-                'message' => 'Payment callback processed',
+            $response = [
+                'message' => 'Payment callback processed via FlexPay verification',
                 'orderNumber' => $orderNumber,
-                'status' => $status
-            ], 200);
+                'status' => $payment->getStatus(),
+                'flexpayStatus' => [
+                    'success' => $flexpayResult['success'] ?? null,
+                    'waiting' => $flexpayResult['waiting'] ?? null,
+                    'message' => $flexpayResult['message'] ?? 'Status check completed'
+                ]
+            ];
+
+            if ($accessCode) {
+                $response['accessCode'] = [
+                    'code' => $accessCode->getCode(),
+                    'expiresAt' => $accessCode->getExpiresAt()->format('Y-m-d H:i:s'),
+                    'isUsed' => $accessCode->isUsed()
+                ];
+            }
+
+            return $this->json($response, 200);
 
         } catch (\Exception $e) {
             return $this->json([

@@ -377,7 +377,7 @@ Initie un paiement par carte bancaire auprès de FlexPay.
 
 ### POST `/api/card-payments/callback`
 
-Callback automatique appelé par FlexPay après traitement du paiement par carte.
+Callback automatique appelé par FlexPay après traitement du paiement par carte. Le système vérifie le statut réel auprès de FlexPay avant de mettre à jour le paiement local.
 
 **🔓 Authentification :** Non requise (appelé par FlexPay)
 
@@ -385,14 +385,30 @@ Callback automatique appelé par FlexPay après traitement du paiement par carte
 - `orderNumber` : Numéro de commande FlexPay
 - `status` : Statut du paiement (`success`, `failed`, `cancelled`)
 
-**✅ Réponse :**
+**✅ Réponse de succès :**
 ```json
 {
-  "message": "Payment callback processed",
+  "message": "Payment callback processed via FlexPay verification",
   "orderNumber": "CARD-123456789-1234567890",
-  "status": "success"
+  "status": "success",
+  "flexpayStatus": {
+    "success": true,
+    "waiting": false,
+    "message": "Paiement éffectué avec success"
+  },
+  "accessCode": {
+    "code": "CINE-ABC123DEF",
+    "expiresAt": "2024-02-14 23:59:59",
+    "isUsed": false
+  }
 }
 ```
+
+**ℹ️ Comportement :**
+- Vérifie le statut réel du paiement auprès de FlexPay
+- Met à jour le statut local uniquement si FlexPay confirme le succès
+- Génère automatiquement un access code si le paiement est validé
+- Ignore le paramètre `status` envoyé et utilise la vérification FlexPay
 
 ### POST `/card-payments/initiate`
 
