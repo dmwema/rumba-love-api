@@ -1,0 +1,15 @@
+api_platform:
+    title: 'Live Streaming Payant API'
+    description: 'API complète pour gérer un système de live streaming payant avec codes d''accès sécurisés'
+    version: 1.0.0
+    defaults:
+        stateless: true
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']
+    swagger:
+        api_keys:
+            JWT:
+                name: Authorization
+                type: header
+    mapping:
+        paths: ['%kernel.project_dir%/src/Entity']

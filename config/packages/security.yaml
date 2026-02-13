@@ -1,0 +1,76 @@
+security:
+    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+        App\Entity\AdminUser:
+            algorithm: auto
+            cost: 12
+
+    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
+    providers:
+        admin_users:
+            entity:
+                class: App\Entity\AdminUser
+                property: email
+        test_admin:
+            memory:
+                users:
+                    fils@cinefilm.cd:
+                        password: '$2y$10$0ajFVsmu7dfG9TLQ8Zc7DOCyE0ErgejSY.91QmPpARVI8zpV4Be..'
+                        roles: [ROLE_ADMIN]
+
+    firewalls:
+        dev:
+            # Ensure dev tools and static assets are always allowed
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+
+        # Firewall pour /api/test - accès public
+        api_test:
+            pattern: ^/api/test$
+            stateless: true
+
+        auth_admin:
+            pattern: ^/auth/admin$
+            stateless: true
+
+        api_admin_public:
+            pattern: ^/api/admin/users$
+            stateless: true
+
+        # api_admin_other:
+        #     pattern: ^/api/admin
+        #     stateless: true
+        #     custom_authenticators:
+        #         - App\Security\TestJwtAuthenticator
+        #     provider: test_admin
+
+        api_live:
+            pattern: ^/api/live
+            stateless: true
+            custom_authenticators:
+                - App\Security\TestJwtAuthenticator
+            provider: test_admin
+
+        # api_public temporairement désactivé pour test
+        # api_public:
+        #     pattern: ^/api/(event|payment|code)
+        #     stateless: true
+
+    # Note: Only the *first* matching rule is applied
+    access_control:
+        - { path: ^/api/admin/users, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
+        - { path: ^/api/live, roles: ROLE_LIVE_ACCESS }
+        - { path: ^/api, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+
+when@test:
+    security:
+        password_hashers:
+            # Password hashers are resource-intensive by design to ensure security.
+            # In tests, it's safe to reduce their cost to improve performance.
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4 # Lowest possible value for bcrypt
+                time_cost: 3 # Lowest possible value for argon
+                memory_cost: 10 # Lowest possible value for argon

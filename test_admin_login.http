@@ -1,0 +1,25 @@
+# Test de connexion administrateur
+# Utilisez un client REST comme Postman, Insomnia, ou curl
+
+### 1. Connexion administrateur
+POST http://localhost:8080/auth/admin
+Content-Type: application/json
+
+{
+  "username": "fils@cinefilm.cd",
+  "password": "p@ssword123654"
+}
+
+### 2. Utilisation du token (remplacez {TOKEN} par le token reçu)
+GET http://localhost:8080/api/admin/users
+Authorization: Bearer {TOKEN}
+
+### 3. Test d'un endpoint protégé sans token (devrait échouer)
+GET http://localhost:8080/api/admin/users
+
+###
+
+# Test avec curl :
+# curl -X POST http://localhost:8080/auth/admin \
+#   -H "Content-Type: application/json" \
+#   -d '{"username": "fils@cinefilm.cd", "password": "p@ssword123654"}'
