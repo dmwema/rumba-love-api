@@ -1411,12 +1411,12 @@ Les erreurs sont automatiquement loggées dans `var/log/dev.log` (dev) ou `var/l
 | Endpoint | Méthode | Description | Authentification |
 |----------|---------|-------------|------------------|
 | `POST /api/register` | Enregistrement utilisateur | fullname, email?, phone | Non requise |
-| `GET /api/users` | Liste utilisateurs + statuts | isOnline, lastActivity | Admin requis |
+| `GET /api/users` | Liste utilisateurs + statuts | isOnline, lastActivity | Public |
 | `POST /api/payments/initiate` | Initier paiement | FlexPay integration | Non requise |
 | `POST /api/payments/confirm` | Confirmer paiement | Génère code automatiquement | Non requise |
-| `GET /api/payments` | Liste paiements | Tous les paiements système | Admin requis |
+| `GET /api/payments` | Liste paiements | Tous les paiements système | Public |
 | `POST /api/validate` | Valider code accès | Génère token live | Non requise |
-| `GET /api/access_codes` | Liste codes accès | Tous les codes générés | Admin requis |
+| `GET /api/access_codes` | Liste codes accès | Tous les codes générés | Public |
 | `POST /auth/admin` | Login administrateur | Retourne token JWT | Non requise |
 
 ### 🏗️ Architecture Complète

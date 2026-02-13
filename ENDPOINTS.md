@@ -51,12 +51,7 @@ Enregistre un nouvel utilisateur ou retourne l'utilisateur existant s'il est dé
 
 Liste tous les utilisateurs enregistrés avec leur statut en ligne/hors ligne.
 
-**🔒 Authentification :** Token Admin requis
-
-**📝 Headers :**
-```
-Authorization: Bearer {admin_token}
-```
+**🔓 Authentification :** Non requise (endpoint public)
 
 **✅ Réponse de succès (200) :**
 ```json
@@ -358,12 +353,7 @@ Callback automatique pour les paiements par carte (appelé par FlexPay).
 
 Liste tous les paiements effectués.
 
-**🔒 Authentification :** Token Admin requis
-
-**📝 Headers :**
-```
-Authorization: Bearer {admin_token}
-```
+**🔓 Authentification :** Non requise (endpoint public)
 
 **✅ Réponse de succès (200) :**
 ```json
@@ -428,12 +418,7 @@ Valide un code d'accès et génère un token temporaire pour l'accès live.
 
 Liste tous les codes d'accès générés.
 
-**🔒 Authentification :** Token Admin requis
-
-**📝 Headers :**
-```
-Authorization: Bearer {admin_token}
-```
+**🔓 Authentification :** Non requise (endpoint public)
 
 **✅ Réponse de succès (200) :**
 ```json
