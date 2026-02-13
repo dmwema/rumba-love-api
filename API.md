@@ -279,6 +279,53 @@ Confirme un paiement et génère automatiquement un code d'accès.
 - **404** : Paiement non trouvé ou déjà traité
 - **500** : Erreur lors du traitement du paiement
 
+### POST `/payments/check-status`
+
+Vérifier le statut d'un paiement FlexPay auprès du service de paiement.
+
+**🔓 Authentification :** Non requise
+
+**📝 Corps de la requête :**
+```json
+{
+  "paymentId": 123
+}
+```
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `paymentId` | integer | ✅ | ID du paiement à vérifier |
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "success",
+  "orderNumber": "ORDER123456",
+  "flexpayStatus": {
+    "success": true,
+    "waiting": false,
+    "message": "Paiement effectué avec success"
+  },
+  "accessCode": {
+    "code": "LIVE-ABC123XYZ",
+    "expiresAt": "2024-02-14 10:30:00",
+    "isUsed": false
+  },
+  "message": "Payment confirmed successfully. Access code generated."
+}
+```
+
+**💡 Notes importantes :**
+- **Génération d'access code :** Quand un paiement passe au statut "success", un code d'accès unique est automatiquement généré pour l'utilisateur (valable 24h)
+- **Code existant :** Si l'utilisateur a déjà un code d'accès valide, celui-ci est réutilisé au lieu d'en générer un nouveau
+
+**❌ Réponses d'erreur :**
+- **400** : paymentId manquant ou paiement sans référence de transaction
+- **404** : Paiement non trouvé
+- **500** : Erreur lors de la vérification
+
 ### GET `/payments`
 
 Liste tous les paiements effectués.

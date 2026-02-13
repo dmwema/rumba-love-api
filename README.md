@@ -56,6 +56,7 @@ La documentation est organisée par tags :
 
 #### 💰 Paiements FlexPay
 - `POST /api/payments/initiate` - Initiation paiement (mobile/carte) avec persistance
+- `POST /api/payments/check-status` - Vérification statut paiement FlexPay
 - `POST /api/payments/confirm` - Confirmation + génération code automatique
 - `GET /api/payments` - Liste complète paiements
 

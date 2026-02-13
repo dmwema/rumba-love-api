@@ -3,8 +3,10 @@
 namespace App\Controller\Api;
 
 use App\DTO\PaymentConfirmRequest;
+use App\Entity\AccessCode;
 use App\Entity\Payment;
 use App\Entity\User;
+use App\Service\AccessCodeService;
 use App\Service\PaymentService;
 use App\Service\Billing\PaymentService as FlexPayService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +28,7 @@ class PaymentController extends AbstractController
         private EntityManagerInterface $entityManager,
         private PaymentService $paymentService,
         private FlexPayService $flexPayService,
+        private AccessCodeService $accessCodeService,
         private ValidatorInterface $validator,
         private LoggerInterface $logger
     ) {}
@@ -220,6 +223,190 @@ class PaymentController extends AbstractController
                 'error' => 'Internal server error',
                 'message' => 'Payment processing failed due to a technical issue',
                 'reference' => 'ERR-' . time()
+            ], 500);
+        }
+    }
+
+    /**
+     * Vérifier le statut d'un paiement FlexPay
+     *
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *         type="object",
+     *         required={"paymentId"},
+     *         @OA\Property(property="paymentId", type="integer", example=123, description="ID du paiement à vérifier")
+     *     )
+     * )
+     * @OA\Response(
+     *     response=200,
+     *     description="Statut du paiement récupéré",
+     *     @OA\JsonContent(
+     *         type="object",
+     *         @OA\Property(property="paymentId", type="integer", example=123),
+     *         @OA\Property(property="status", type="string", example="success", enum={"success", "pending", "failed"}),
+     *         @OA\Property(property="orderNumber", type="string", example="ORDER123456"),
+     *         @OA\Property(property="flexpayStatus", type="object", description="Informations détaillées de FlexPay"),
+     *         @OA\Property(property="accessCode", type="object", nullable=true, description="Code d'accès généré si paiement réussi",
+     *             @OA\Property(property="code", type="string", example="LIVE-ABC123XYZ"),
+     *             @OA\Property(property="expiresAt", type="string", format="date-time", example="2024-02-14T10:30:00Z"),
+     *             @OA\Property(property="isUsed", type="boolean", example=false)
+     *         )
+     *     )
+     * )
+     * @OA\Response(
+     *     response=404,
+     *     description="Paiement non trouvé",
+     *     @OA\JsonContent(
+     *         type="object",
+     *         @OA\Property(property="error", type="string", example="Payment not found")
+     *     )
+     * )
+     */
+    #[Route('/check-status', name: 'api_payment_check_status', methods: ['POST'])]
+    public function checkPaymentStatus(Request $request): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!$data || !isset($data['paymentId'])) {
+            return $this->json(['error' => 'paymentId is required'], 400);
+        }
+
+        $paymentId = (int) $data['paymentId'];
+
+        try {
+            // Récupérer le paiement depuis la base
+            $payment = $this->entityManager->getRepository(Payment::class)->find($paymentId);
+
+            if (!$payment) {
+                return $this->json(['error' => 'Payment not found'], 404);
+            }
+
+            // Vérifier que le paiement a une référence de transaction
+            $orderNumber = $payment->getTransactionReference();
+            if (!$orderNumber) {
+                return $this->json([
+                    'error' => 'No transaction reference found for this payment',
+                    'paymentId' => $paymentId,
+                    'status' => $payment->getStatus()
+                ], 400);
+            }
+
+            // Créer l'objet operation pour FlexPay (même interface que pour les autres méthodes)
+            $operation = new class($orderNumber, $payment->getPaymentMethod() === 'mobile' ? $payment->getUser()->getPhone() : '243999999999') {
+                private $orderNumber;
+                private $phoneNumber;
+
+                public function __construct($orderNumber, $phoneNumber) {
+                    $this->orderNumber = $orderNumber;
+                    $this->phoneNumber = $phoneNumber;
+                }
+
+                public function getOrderNumber() { return $this->orderNumber; }
+                public function getPhoneNumber() { return $this->phoneNumber; }
+                public function getReference() { return $this->orderNumber; }
+                public function getAmount() { return '5.00'; } // Montant par défaut pour la vérification
+            };
+
+            // Vérifier le statut auprès de FlexPay
+            try {
+                $flexpayResult = $this->flexPayService->checkPaymentStatus($operation);
+            } catch (\Exception $flexpayException) {
+                // Si FlexPay échoue, retourner le statut actuel du paiement
+                $this->logger->warning('FlexPay status check failed, returning current payment status', [
+                    'paymentId' => $paymentId,
+                    'orderNumber' => $orderNumber,
+                    'error' => $flexpayException->getMessage()
+                ]);
+
+                return $this->json([
+                    'paymentId' => $payment->getId(),
+                    'status' => $payment->getStatus(),
+                    'orderNumber' => $orderNumber,
+                    'flexpayStatus' => [
+                        'success' => null,
+                        'waiting' => null,
+                        'message' => 'Unable to check status with FlexPay: ' . $flexpayException->getMessage()
+                    ],
+                    'message' => 'Payment status retrieved from database (FlexPay check failed)'
+                ], 200);
+            }
+
+            // Mettre à jour le statut du paiement si nécessaire
+            $accessCode = null;
+            $isNewPaymentSuccess = false;
+
+            if (isset($flexpayResult['success']) && $flexpayResult['success'] && $payment->getStatus() !== 'success') {
+                $payment->setStatus('success');
+                $this->entityManager->flush();
+                $isNewPaymentSuccess = true;
+
+                // Générer un access code pour l'utilisateur si le paiement vient de réussir
+                $user = $payment->getUser();
+
+                // Vérifier si l'utilisateur a déjà un access code valide
+                $existingAccessCode = $this->entityManager->getRepository(AccessCode::class)->findOneBy([
+                    'user' => $user,
+                    'isUsed' => false
+                ], ['expiresAt' => 'DESC']);
+
+                if (!$existingAccessCode || !$existingAccessCode->isValid()) {
+                    // Générer un nouveau code d'accès
+                    $accessCode = $this->accessCodeService->createAccessCodeForUser($user);
+                    $this->logger->info('Access code generated for successful payment', [
+                        'paymentId' => $paymentId,
+                        'userId' => $user->getId(),
+                        'accessCode' => $accessCode->getCode()
+                    ]);
+                } else {
+                    // Utiliser le code existant
+                    $accessCode = $existingAccessCode;
+                    $this->logger->info('Using existing valid access code for successful payment', [
+                        'paymentId' => $paymentId,
+                        'userId' => $user->getId(),
+                        'accessCode' => $accessCode->getCode()
+                    ]);
+                }
+            } elseif (isset($flexpayResult['success']) && !$flexpayResult['success'] && !($flexpayResult['waiting'] ?? false) && $payment->getStatus() === 'pending') {
+                $payment->setStatus('failed');
+                $this->entityManager->flush();
+            }
+
+            // Préparer la réponse
+            $response = [
+                'paymentId' => $payment->getId(),
+                'status' => $payment->getStatus(),
+                'orderNumber' => $orderNumber,
+                'flexpayStatus' => [
+                    'success' => $flexpayResult['success'] ?? null,
+                    'waiting' => $flexpayResult['waiting'] ?? null,
+                    'message' => $flexpayResult['message'] ?? 'Status check completed'
+                ],
+                'message' => $isNewPaymentSuccess ? 'Payment confirmed successfully. Access code generated.' : 'Payment status checked successfully'
+            ];
+
+            // Ajouter l'access code si disponible
+            if ($accessCode) {
+                $response['accessCode'] = [
+                    'code' => $accessCode->getCode(),
+                    'expiresAt' => $accessCode->getExpiresAt()->format('Y-m-d H:i:s'),
+                    'isUsed' => $accessCode->isUsed()
+                ];
+            }
+
+            return $this->json($response, 200);
+
+        } catch (\Exception $e) {
+            $this->logger->error('Payment status check failed', [
+                'error' => $e->getMessage(),
+                'paymentId' => $paymentId,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->json([
+                'error' => 'Internal server error',
+                'message' => 'Failed to check payment status',
+                'reference' => 'CHK-' . time()
             ], 500);
         }
     }
