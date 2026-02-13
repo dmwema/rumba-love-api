@@ -72,13 +72,13 @@ class User
     private ?string $phone = null;
 
     #[ORM\Column(type: 'datetime', nullable: true)]
-    private ?\DateTimeInterface $lastActivity = null;
+    private ?\DateTime $lastActivity = null;
 
     #[ORM\Column(type: 'boolean')]
     private bool $isOnline = false;
 
     #[ORM\Column(type: 'datetime')]
-    private \DateTimeInterface $createdAt;
+    private \DateTime $createdAt;
 
     /**
      * @var Collection<int, Payment>

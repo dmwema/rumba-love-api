@@ -81,7 +81,7 @@ class Payment
     private ?string $transactionReference = null;
 
     #[ORM\Column(type: 'datetime')]
-    private \DateTimeInterface $createdAt;
+    private \DateTime $createdAt;
 
     public function __construct()
     {

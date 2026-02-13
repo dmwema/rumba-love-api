@@ -56,14 +56,14 @@ class AccessCode
     private bool $isUsed = false;
 
     #[ORM\Column(type: 'datetime', nullable: true)]
-    private ?\DateTimeInterface $usedAt = null;
+    private ?\DateTime $usedAt = null;
 
     #[ORM\Column(type: 'datetime')]
     #[Assert\NotBlank]
-    private \DateTimeInterface $expiresAt;
+    private \DateTime $expiresAt;
 
     #[ORM\Column(type: 'datetime')]
-    private \DateTimeInterface $createdAt;
+    private \DateTime $createdAt;
 
     public function __construct()
     {

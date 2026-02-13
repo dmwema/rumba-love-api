@@ -55,7 +55,7 @@ La documentation est organisée par tags :
 - `GET /api/users` - Liste avec statuts en ligne (`isOnline`, `lastActivity`)
 
 #### 💰 Paiements FlexPay
-- `POST /api/payments/initiate` - Initiation paiement (mobile/carte)
+- `POST /api/payments/initiate` - Initiation paiement (mobile/carte) avec persistance
 - `POST /api/payments/confirm` - Confirmation + génération code automatique
 - `GET /api/payments` - Liste complète paiements
 

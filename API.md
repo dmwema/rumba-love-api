@@ -213,27 +213,31 @@ Initie un processus de paiement pour un utilisateur.
 **✅ Réponse de succès (200) :**
 ```json
 {
-  "paymentId": 123,
-  "status": "pending",
+  "paymentId": 1,
+  "status": "processing",
   "amount": "10.00",
   "paymentMethod": "mobile",
   "orderNumber": "ORDER123456",
-  "message": "Payment initiated with FlexPay"
+  "userId": 3,
+  "message": "Payment initiated with FlexPay - Data persisted"
 }
 ```
 
 **Pour les paiements par carte :**
 ```json
 {
-  "paymentId": 123,
-  "status": "pending",
+  "paymentId": 2,
+  "status": "processing",
   "amount": "10.00",
   "paymentMethod": "card",
-  "orderNumber": "ORDER123456",
-  "redirectUrl": "https://cardpayment.flexpay.cd/...",
-  "message": "Payment initiated with FlexPay"
+  "orderNumber": "CARD123456",
+  "userId": 4,
+  "redirectUrl": "https://flexpay-simulation.com/pay/...",
+  "message": "Payment initiated with FlexPay - Data persisted"
 }
 ```
+
+**🗄️ Persistance :** Toutes les données (utilisateur + paiement) sont automatiquement sauvegardées en base de données SQLite.
 
 **❌ Réponses d'erreur :**
 - **400** : Données invalides
@@ -433,27 +437,31 @@ Initie un processus de paiement pour un utilisateur.
 **✅ Réponse de succès (200) :**
 ```json
 {
-  "paymentId": 123,
-  "status": "pending",
+  "paymentId": 1,
+  "status": "processing",
   "amount": "10.00",
   "paymentMethod": "mobile",
   "orderNumber": "ORDER123456",
-  "message": "Payment initiated with FlexPay"
+  "userId": 3,
+  "message": "Payment initiated with FlexPay - Data persisted"
 }
 ```
 
 **Pour les paiements par carte :**
 ```json
 {
-  "paymentId": 123,
-  "status": "pending",
+  "paymentId": 2,
+  "status": "processing",
   "amount": "10.00",
   "paymentMethod": "card",
-  "orderNumber": "ORDER123456",
-  "redirectUrl": "https://cardpayment.flexpay.cd/...",
-  "message": "Payment initiated with FlexPay"
+  "orderNumber": "CARD123456",
+  "userId": 4,
+  "redirectUrl": "https://flexpay-simulation.com/pay/...",
+  "message": "Payment initiated with FlexPay - Data persisted"
 }
 ```
+
+**🗄️ Persistance :** Toutes les données (utilisateur + paiement) sont automatiquement sauvegardées en base de données SQLite.
 
 **❌ Réponses d'erreur :**
 
