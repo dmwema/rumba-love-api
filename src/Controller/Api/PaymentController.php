@@ -2,10 +2,11 @@
 
 namespace App\Controller\Api;
 
-use App\DTO\PaymentInitiateRequest;
 use App\DTO\PaymentConfirmRequest;
+use App\Entity\Payment;
 use App\Entity\User;
 use App\Service\PaymentService;
+use App\Service\Billing\PaymentService as FlexPayService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -23,33 +24,36 @@ class PaymentController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private PaymentService $paymentService,
+        private FlexPayService $flexPayService,
         private ValidatorInterface $validator
     ) {}
 
     /**
-     * Initier un processus de paiement
+     * Initier un processus de paiement avec FlexPay
      *
      * @OA\RequestBody(
      *     required=true,
      *     @OA\JsonContent(
      *         type="object",
-     *         required={"email", "fullName", "paymentMethod"},
+     *         required={"email", "fullName", "phone", "paymentMethod"},
      *         @OA\Property(property="email", type="string", format="email", example="user@example.com"),
      *         @OA\Property(property="fullName", type="string", example="John Doe"),
-     *         @OA\Property(property="phone", type="string", example="+243123456789"),
-     *         @OA\Property(property="paymentMethod", type="string", enum={"card", "mobile"}, example="card")
+     *         @OA\Property(property="phone", type="string", example="243814063056"),
+     *         @OA\Property(property="paymentMethod", type="string", enum={"card", "mobile"}, example="mobile")
      *     )
      * )
      * @OA\Response(
-     *     response=201,
+     *     response=200,
      *     description="Paiement initié avec succès",
      *     @OA\JsonContent(
      *         type="object",
      *         @OA\Property(property="paymentId", type="integer", example=123),
      *         @OA\Property(property="status", type="string", example="pending"),
      *         @OA\Property(property="amount", type="string", example="10.00"),
-     *         @OA\Property(property="paymentMethod", type="string", example="card"),
-     *         @OA\Property(property="message", type="string", example="Payment initiated successfully")
+     *         @OA\Property(property="paymentMethod", type="string", example="mobile"),
+     *         @OA\Property(property="orderNumber", type="string", example="ORDER123456"),
+     *         @OA\Property(property="redirectUrl", type="string", example="https://flexpay.cd/pay/..."),
+     *         @OA\Property(property="message", type="string", example="Payment initiated with FlexPay")
      *     )
      * )
      * @OA\Response(
@@ -57,7 +61,7 @@ class PaymentController extends AbstractController
      *     description="Données invalides",
      *     @OA\JsonContent(
      *         type="object",
-     *         @OA\Property(property="errors", type="array", @OA\Items(type="string"))
+     *         @OA\Property(property="error", type="string", example="Missing required parameters")
      *     )
      * )
      */
@@ -66,43 +70,124 @@ class PaymentController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
-        if (!$data) {
-            return $this->json(['error' => 'Invalid JSON'], 400);
+        // Validation des paramètres requis
+        if (!$data ||
+            !isset($data['email']) ||
+            !isset($data['fullName']) ||
+            !isset($data['phone']) ||
+            !isset($data['paymentMethod'])) {
+            return $this->json(['error' => 'Missing required parameters: email, fullName, phone, paymentMethod'], 400);
         }
 
-        $dto = new PaymentInitiateRequest($data);
-        $errors = $this->validator->validate($dto);
+        $email = trim($data['email']);
+        $fullName = trim($data['fullName']);
+        $phone = trim($data['phone']);
+        $paymentMethod = trim($data['paymentMethod']);
 
-        if (count($errors) > 0) {
-            $errorMessages = [];
-            foreach ($errors as $error) {
-                $errorMessages[] = $error->getMessage();
+        // Validation basique
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->json(['error' => 'Invalid email format'], 400);
+        }
+
+        if (!in_array($paymentMethod, ['card', 'mobile'])) {
+            return $this->json(['error' => 'Invalid payment method. Must be "card" or "mobile"'], 400);
+        }
+
+        try {
+            // 1. Enregistrer l'utilisateur
+            $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+
+            if (!$user) {
+                $user = new User();
+                $user->setEmail($email);
+                $user->setFullName($fullName);
+                $user->setPhone($phone);
+                $user->setCreatedAt(new \DateTimeImmutable());
+                $this->entityManager->persist($user);
+                $this->entityManager->flush();
             }
-            return $this->json(['errors' => $errorMessages], 400);
-        }
 
-        // Trouver ou créer l'utilisateur
-        $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $dto->email]);
+            // 2. Créer le paiement en base
+            $payment = new Payment();
+            $payment->setUser($user);
+            $payment->setAmount('10.00'); // Prix fixe du concert
+            $payment->setPaymentMethod($paymentMethod);
+            $payment->setStatus('pending');
+            $payment->setCreatedAt(new \DateTimeImmutable());
 
-        if (!$user) {
-            $user = new User();
-            $user->setEmail($dto->email);
-            $user->setFullName($dto->fullName);
-            $user->setPhone($dto->phone);
-            $this->entityManager->persist($user);
+            $this->entityManager->persist($payment);
             $this->entityManager->flush();
+
+            // 3. Générer une référence unique pour FlexPay
+            $reference = 'PAY-' . $payment->getId() . '-' . time();
+
+            // 4. Créer l'objet operation pour FlexPay
+            $operation = new class($phone, $reference, '10.00') {
+                private $phoneNumber;
+                private $reference;
+                private $amount;
+
+                public function __construct($phone, $reference, $amount) {
+                    $this->phoneNumber = $phone;
+                    $this->reference = $reference;
+                    $this->amount = $amount;
+                }
+
+                public function getPhoneNumber() { return $this->phoneNumber; }
+                public function getReference() { return $this->reference; }
+                public function getAmount() { return $this->amount; }
+                public function getOrderNumber() { return $this->reference; }
+            };
+
+            // 5. Lancer le paiement FlexPay
+            $flexpayResult = null;
+            if ($paymentMethod === 'mobile') {
+                $flexpayResult = $this->flexPayService->mobilePayment($operation);
+            } elseif ($paymentMethod === 'card') {
+                $flexpayResult = $this->flexPayService->cardPayment($operation);
+            }
+
+            if (!$flexpayResult || !$flexpayResult['success']) {
+                $payment->setStatus('failed');
+                $this->entityManager->flush();
+
+                return $this->json([
+                    'error' => 'Payment initiation failed',
+                    'message' => $flexpayResult['message'] ?? 'Unknown error',
+                    'paymentId' => $payment->getId()
+                ], 400);
+            }
+
+            // 6. Mettre à jour le paiement avec les infos FlexPay
+            $payment->setTransactionReference($reference);
+            if (isset($flexpayResult['orderNumber'])) {
+                $payment->setTransactionReference($flexpayResult['orderNumber']);
+            }
+            $this->entityManager->flush();
+
+            // 7. Retourner les informations de paiement
+            $response = [
+                'paymentId' => $payment->getId(),
+                'status' => $payment->getStatus(),
+                'amount' => $payment->getAmount(),
+                'paymentMethod' => $payment->getPaymentMethod(),
+                'orderNumber' => $flexpayResult['orderNumber'] ?? $reference,
+                'message' => 'Payment initiated with FlexPay'
+            ];
+
+            // Ajouter redirectUrl pour les paiements par carte
+            if ($paymentMethod === 'card' && isset($flexpayResult['redirectUrl'])) {
+                $response['redirectUrl'] = $flexpayResult['redirectUrl'];
+            }
+
+            return $this->json($response, 200);
+
+        } catch (\Exception $e) {
+            return $this->json([
+                'error' => 'Internal server error',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        // Créer le paiement
-        $payment = $this->paymentService->initiatePayment($user, '10.00', $dto->paymentMethod);
-
-        return $this->json([
-            'paymentId' => $payment->getId(),
-            'status' => $payment->getStatus(),
-            'amount' => $payment->getAmount(),
-            'paymentMethod' => $payment->getPaymentMethod(),
-            'message' => 'Payment initiated successfully'
-        ], 201);
     }
 
     /**

@@ -210,14 +210,28 @@ Initie un processus de paiement pour un utilisateur.
 | `phone` | string | ✅ | Numéro de téléphone |
 | `paymentMethod` | string | ✅ | `card` ou `mobile` |
 
-**✅ Réponse de succès (201) :**
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "pending",
+  "amount": "10.00",
+  "paymentMethod": "mobile",
+  "orderNumber": "ORDER123456",
+  "message": "Payment initiated with FlexPay"
+}
+```
+
+**Pour les paiements par carte :**
 ```json
 {
   "paymentId": 123,
   "status": "pending",
   "amount": "10.00",
   "paymentMethod": "card",
-  "message": "Payment initiated successfully"
+  "orderNumber": "ORDER123456",
+  "redirectUrl": "https://cardpayment.flexpay.cd/...",
+  "message": "Payment initiated with FlexPay"
 }
 ```
 
@@ -402,8 +416,8 @@ Initie un processus de paiement pour un utilisateur.
 {
   "email": "user@example.com",
   "fullName": "John Doe",
-  "phone": "+243123456789",
-  "paymentMethod": "card"
+  "phone": "243814063056",
+  "paymentMethod": "mobile"
 }
 ```
 
@@ -416,14 +430,28 @@ Initie un processus de paiement pour un utilisateur.
 | `phone` | string | ❌ | Numéro de téléphone international |
 | `paymentMethod` | string | ✅ | `card` ou `mobile` |
 
-**✅ Réponse de succès (201) :**
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "pending",
+  "amount": "10.00",
+  "paymentMethod": "mobile",
+  "orderNumber": "ORDER123456",
+  "message": "Payment initiated with FlexPay"
+}
+```
+
+**Pour les paiements par carte :**
 ```json
 {
   "paymentId": 123,
   "status": "pending",
   "amount": "10.00",
   "paymentMethod": "card",
-  "message": "Payment initiated successfully"
+  "orderNumber": "ORDER123456",
+  "redirectUrl": "https://cardpayment.flexpay.cd/...",
+  "message": "Payment initiated with FlexPay"
 }
 ```
 
