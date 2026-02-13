@@ -142,17 +142,35 @@ class PaymentService
         $message = '';
         $success = false;
         $content = $response->toArray();
-        if ($content["transaction"]) {
-            if ($content["transaction"]["status"] === "0" || $operation->getPhoneNumber() === '243999999999') {
+
+        // Vérifier si la réponse contient les données attendues
+        if (isset($content["transaction"]) && is_array($content["transaction"])) {
+            $transactionStatus = $content["transaction"]["status"] ?? null;
+
+            if ($transactionStatus === "0" || $operation->getPhoneNumber() === '243999999999') {
                 $message = 'Paiement éffectué avec success';
                 $success = true;
+                $waiting = false;
+            } elseif ($transactionStatus === "2") {
+                $message = 'Le paiement est en attente';
+                $success = false;
+                $waiting = true;
             } else {
-                $message = $content["message"];
+                // Statut inconnu ou erreur - traiter comme échec définitif
+                $message = $content["message"] ?? 'Paiement rejeté ou expiré';
+                $success = false;
+                $waiting = false;
             }
+        } else {
+            // Réponse malformée ou erreur de communication
+            $message = 'Erreur lors de la vérification du paiement';
+            $success = false;
+            $waiting = false;
         }
+
         return [
             'success' => $success,
-            'waiting' => $content["transaction"]["status"] === "2" && $operation->getPhoneNumber() !== '243999999999',
+            'waiting' => $waiting,
             'message' => $message
         ];
     }

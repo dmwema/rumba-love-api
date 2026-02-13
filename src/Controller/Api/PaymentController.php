@@ -332,43 +332,61 @@ class PaymentController extends AbstractController
                 ], 200);
             }
 
-            // Mettre à jour le statut du paiement si nécessaire
+            // Mettre à jour le statut du paiement basé sur le résultat FlexPay
             $accessCode = null;
             $isNewPaymentSuccess = false;
+            $statusUpdated = false;
 
-            if (isset($flexpayResult['success']) && $flexpayResult['success'] && $payment->getStatus() !== 'success') {
-                $payment->setStatus('success');
-                $this->entityManager->flush();
-                $isNewPaymentSuccess = true;
+            // Si FlexPay retourne un résultat définitif (pas en attente)
+            if (isset($flexpayResult['waiting']) && $flexpayResult['waiting'] === false) {
+                // FlexPay a donné une réponse définitive
+                if (isset($flexpayResult['success']) && $flexpayResult['success'] === true) {
+                    // Paiement réussi
+                    if ($payment->getStatus() !== 'success') {
+                        $payment->setStatus('success');
+                        $statusUpdated = true;
+                        $isNewPaymentSuccess = true;
+                        $this->logger->info('Payment status updated to success', ['paymentId' => $paymentId]);
 
-                // Générer un access code pour l'utilisateur si le paiement vient de réussir
-                $user = $payment->getUser();
+                        // Générer un access code pour l'utilisateur
+                        $user = $payment->getUser();
 
-                // Vérifier si l'utilisateur a déjà un access code valide
-                $existingAccessCode = $this->entityManager->getRepository(AccessCode::class)->findOneBy([
-                    'user' => $user,
-                    'isUsed' => false
-                ], ['expiresAt' => 'DESC']);
+                        // Vérifier si l'utilisateur a déjà un access code valide
+                        $existingAccessCode = $this->entityManager->getRepository(AccessCode::class)->findOneBy([
+                            'user' => $user,
+                            'isUsed' => false
+                        ], ['expiresAt' => 'DESC']);
 
-                if (!$existingAccessCode || !$existingAccessCode->isValid()) {
-                    // Générer un nouveau code d'accès
-                    $accessCode = $this->accessCodeService->createAccessCodeForUser($user);
-                    $this->logger->info('Access code generated for successful payment', [
-                        'paymentId' => $paymentId,
-                        'userId' => $user->getId(),
-                        'accessCode' => $accessCode->getCode()
-                    ]);
-                } else {
-                    // Utiliser le code existant
-                    $accessCode = $existingAccessCode;
-                    $this->logger->info('Using existing valid access code for successful payment', [
-                        'paymentId' => $paymentId,
-                        'userId' => $user->getId(),
-                        'accessCode' => $accessCode->getCode()
-                    ]);
+                        if (!$existingAccessCode || !$existingAccessCode->isValid()) {
+                            // Générer un nouveau code d'accès
+                            $accessCode = $this->accessCodeService->createAccessCodeForUser($user);
+                            $this->logger->info('Access code generated for successful payment', [
+                                'paymentId' => $paymentId,
+                                'userId' => $user->getId(),
+                                'accessCode' => $accessCode->getCode()
+                            ]);
+                        } else {
+                            // Utiliser le code existant
+                            $accessCode = $existingAccessCode;
+                            $this->logger->info('Using existing valid access code for successful payment', [
+                                'paymentId' => $paymentId,
+                                'userId' => $user->getId(),
+                                'accessCode' => $accessCode->getCode()
+                            ]);
+                        }
+                    }
+                } elseif (isset($flexpayResult['success']) && $flexpayResult['success'] === false) {
+                    // Paiement échoué
+                    if ($payment->getStatus() !== 'failed') {
+                        $payment->setStatus('failed');
+                        $statusUpdated = true;
+                        $this->logger->info('Payment status updated to failed', ['paymentId' => $paymentId]);
+                    }
                 }
-            } elseif (isset($flexpayResult['success']) && !$flexpayResult['success'] && !($flexpayResult['waiting'] ?? false) && $payment->getStatus() === 'pending') {
-                $payment->setStatus('failed');
+            }
+
+            // Sauvegarder les changements si le statut a été mis à jour
+            if ($statusUpdated) {
                 $this->entityManager->flush();
             }
 
