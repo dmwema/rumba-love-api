@@ -43,10 +43,12 @@ La documentation est organisée par tags :
 - ✅ **Codes d'accès** : Génération automatique et validation
 - ✅ **Accès live sécurisé** : Stream protégé avec JWT temporaire
 - ✅ **Administration complète** : Gestion utilisateurs, paiements, codes
-- ✅ **Sécurité renforcée** : JWT, chiffrement AES, validation HTTPS, audit logging
+- ✅ **Accès public** : Toutes les routes accessibles sans authentification
 - ✅ **API Platform** : Documentation Swagger automatique
 
-### 🛡️ Nouveaux Endpoints Sécurisés
+### 🌐 Tous les Endpoints Publics
+
+**Toutes les routes sont maintenant publiques et ne nécessitent aucune authentification.**
 
 #### 👥 Gestion Utilisateurs
 - `POST /api/register` - Enregistrement avec gestion doublons
@@ -55,13 +57,13 @@ La documentation est organisée par tags :
 #### 💰 Paiements FlexPay
 - `POST /api/payments/initiate` - Initiation paiement (mobile/carte)
 - `POST /api/payments/confirm` - Confirmation + génération code automatique
-- `GET /api/payments` - Liste complète paiements (admin)
+- `GET /api/payments` - Liste complète paiements
 
-#### 🎫 Validation Sécurisée
+#### 🎫 Validation Codes
 - `POST /api/validate` - Validation code + token live 5min
-- `GET /api/access_codes` - Liste codes d'accès (admin)
+- `GET /api/access_codes` - Liste codes d'accès
 
-#### 🎬 Accès Stream Simplifié
+#### 🎬 Accès Stream Public
 - `GET /api/live/watch` - Accès stream via variable d'environnement `STREAM_URL`
 - Configuration sans base de données, directement via `.env.local`
 
@@ -75,6 +77,16 @@ STREAM_URL=https://votre-plateforme-stream.com/live/concert
 ```
 
 **Voir [STREAM_CONFIG_README.md](STREAM_CONFIG_README.md) pour la configuration complète.**
+
+### ⚠️ Note Importante : API Publique
+
+**Toutes les routes de cette API sont maintenant publiques et ne nécessitent aucune authentification.** Cela inclut :
+- Accès aux données utilisateurs
+- Historique des paiements
+- Liste des codes d'accès
+- Accès au stream live
+
+**Utilisez cette API uniquement dans un environnement de confiance ou ajoutez une authentification supplémentaire si nécessaire.**
 
 ## 🏗️ Architecture
 

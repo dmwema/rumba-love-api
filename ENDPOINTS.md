@@ -450,14 +450,7 @@ Tous les endpoints sont automatiquement documentés avec :
 
 ### GET `/api/live/watch`
 
-Accès direct au stream live via variable d'environnement.
-
-**🔒 Authentification :** Token d'accès live (obtenu via validation de code)
-
-**📝 Headers :**
-```
-Authorization: Bearer {live_access_token}
-```
+Accès public direct au stream live via variable d'environnement.
 
 **✅ Réponse de succès (200) :**
 ```json

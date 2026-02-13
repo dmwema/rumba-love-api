@@ -53,7 +53,7 @@ http://localhost:8000/api
 ### Headers communs
 ```http
 Content-Type: application/json
-Authorization: Bearer {token}  # Pour les routes protégées
+# Toutes les routes sont publiques - pas d'authentification requise
 ```
 
 ### Nouveaux Endpoints Ajoutés
@@ -297,14 +297,7 @@ Authorization: Bearer {admin_token}
 
 ### GET `/live/watch`
 
-Accès au stream live avec authentification par token d'accès live.
-
-**🔒 Authentification :** Token d'accès live requis (obtenu via validation de code)
-
-**📝 Headers :**
-```
-Authorization: Bearer {live_access_token}
-```
+Accès public au stream live (pas d'authentification requise).
 
 **✅ Réponse de succès (200) :**
 ```json
@@ -862,7 +855,7 @@ sequenceDiagram
     A->>DB: Valider code + Marquer user online
     A->>F: Token JWT temporaire (5 min)
 
-    F->>A: GET /api/live/watch (avec token)
+    F->>A: GET /api/live/watch
     A->>DB: Vérifier token et déchiffrer URL
     A->>F: URL du stream
 ```
@@ -970,8 +963,7 @@ curl -X POST http://localhost:8000/api/validate \
   -d '{"code": "CINE-A1B2C3D4"}'
 
 # 6. Accéder au live avec le token
-curl -X GET http://localhost:8000/api/live/watch \
-  -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+curl -X GET http://localhost:8000/api/live/watch
 ```
 
 ### Tests d'Administration

@@ -30,40 +30,11 @@ security:
             pattern: ^/api/test$
             stateless: true
 
-        auth_admin:
-            pattern: ^/auth/admin$
-            stateless: true
-
-        api_admin_public:
-            pattern: ^/api/admin/(users|create-test-event)$
-            stateless: true
-
-        api_admin:
-            pattern: ^/api/admin
-            stateless: true
-            custom_authenticators:
-                - App\Security\TestJwtAuthenticator
-            provider: test_admin
-
-        api_live:
-            pattern: ^/api/live
-            stateless: true
-            custom_authenticators:
-                - App\Security\TestJwtAuthenticator
-            provider: test_admin
-
-        # api_public temporairement désactivé pour test
-        # api_public:
-        #     pattern: ^/api/(event|payment|code)
-        #     stateless: true
+        # Tout est public maintenant - pas de restrictions d'authentification
 
     # Note: Only the *first* matching rule is applied
     access_control:
-        - { path: ^/api/admin/users, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/api/admin/create-test-event, roles: IS_AUTHENTICATED_ANONYMOUSLY }
-        - { path: ^/api/admin, roles: ROLE_ADMIN }
-        - { path: ^/api/live, roles: ROLE_LIVE_ACCESS }
-        - { path: ^/api, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+        - { path: ^/, roles: IS_AUTHENTICATED_ANONYMOUSLY }
 
 when@test:
     security:

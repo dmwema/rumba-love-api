@@ -15,7 +15,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 use OpenApi\Annotations as OA;
 
 /**
@@ -142,7 +141,6 @@ class AdminController extends AbstractController
      * )
      */
     #[Route('/users', name: 'api_admin_users', methods: ['GET'])]
-    // #[IsGranted('ROLE_ADMIN')] // Temporairement désactivé pour test
     public function getUsers(): JsonResponse
     {
         error_log('AdminController::getUsers called');
