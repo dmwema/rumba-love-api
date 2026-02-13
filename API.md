@@ -56,6 +56,15 @@ Content-Type: application/json
 Authorization: Bearer {token}  # Pour les routes protégées
 ```
 
+### Nouveaux Endpoints Ajoutés
+
+Cette API inclut maintenant tous les endpoints demandés :
+
+- **👥 Gestion Utilisateurs** : Enregistrement, listing avec statuts en ligne
+- **💰 Gestion Paiements** : Initiation et confirmation avec FlexPay
+- **🎫 Validation Codes** : Vérification et génération de tokens live
+- **📊 Administration Complète** : Gestion de tous les aspects système
+
 ---
 
 ## 🎪 ÉVÉNEMENT PUBLIC
@@ -90,6 +99,265 @@ Host: localhost:8000
 {
   "error": "No live event available"
 }
+```
+
+---
+
+## 👥 GESTION DES UTILISATEURS
+
+### POST `/register`
+
+Enregistre un nouvel utilisateur ou retourne l'utilisateur existant.
+
+**🔓 Authentification :** Non requise
+
+**📝 Corps de la requête :**
+```json
+{
+  "fullName": "John Doe",
+  "email": "john@example.com",
+  "phone": "243999999999"
+}
+```
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `fullName` | string | ✅ | Nom complet de l'utilisateur |
+| `email` | string | ❌ | Adresse email (optionnel) |
+| `phone` | string | ✅ | Numéro de téléphone |
+
+**✅ Réponse de succès (201) :**
+```json
+{
+  "id": 1,
+  "fullName": "John Doe",
+  "email": "john@example.com",
+  "phone": "243999999999",
+  "isOnline": false,
+  "lastActivity": null,
+  "createdAt": "2026-02-13T10:30:00+00:00"
+}
+```
+
+**❌ Réponses d'erreur :**
+- **400** : Données invalides (validation échoue)
+
+### GET `/users`
+
+Liste tous les utilisateurs avec leur statut en ligne/hors ligne.
+
+**🔒 Authentification :** Token Admin requis
+
+**📝 Headers :**
+```
+Authorization: Bearer {admin_token}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+[
+  {
+    "id": 1,
+    "fullName": "John Doe",
+    "email": "john@example.com",
+    "phone": "243999999999",
+    "isOnline": true,
+    "lastActivity": "2026-02-13T10:35:00+00:00",
+    "createdAt": "2026-02-13T10:30:00+00:00"
+  },
+  {
+    "id": 2,
+    "fullName": "Jane Smith",
+    "email": null,
+    "phone": "243888888888",
+    "isOnline": false,
+    "lastActivity": "2026-02-12T15:20:00+00:00",
+    "createdAt": "2026-02-12T14:00:00+00:00"
+  }
+]
+```
+
+**📋 Logique du statut en ligne :**
+- `isOnline: true` si l'utilisateur a eu une activité dans les 5 dernières minutes
+- `lastActivity` : timestamp de la dernière activité connue
+
+---
+
+## 💰 GESTION DES PAIEMENTS
+
+### POST `/payments/initiate`
+
+Initie un processus de paiement pour un utilisateur.
+
+**🔓 Authentification :** Non requise
+
+**📝 Corps de la requête :**
+```json
+{
+  "email": "user@example.com",
+  "fullName": "John Doe",
+  "phone": "243999999999",
+  "paymentMethod": "card"
+}
+```
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `email` | string | ✅ | Email de l'utilisateur |
+| `fullName` | string | ✅ | Nom complet |
+| `phone` | string | ✅ | Numéro de téléphone |
+| `paymentMethod` | string | ✅ | `card` ou `mobile` |
+
+**✅ Réponse de succès (201) :**
+```json
+{
+  "paymentId": 123,
+  "status": "pending",
+  "amount": "10.00",
+  "paymentMethod": "card",
+  "message": "Payment initiated successfully"
+}
+```
+
+**❌ Réponses d'erreur :**
+- **400** : Données invalides
+- **500** : Erreur lors de la création du paiement
+
+### POST `/payments/confirm`
+
+Confirme un paiement et génère automatiquement un code d'accès.
+
+**🔓 Authentification :** Non requise
+
+**📝 Corps de la requête :**
+```json
+{
+  "paymentId": 123
+}
+```
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `paymentId` | integer | ✅ | ID du paiement à confirmer |
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "success",
+  "amount": "10.00",
+  "paymentMethod": "card",
+  "transactionReference": "TXN-abc123def",
+  "orderNumber": "ORD-123",
+  "message": "Payment confirmed successfully. Access code generated."
+}
+```
+
+**❌ Réponses d'erreur :**
+- **400** : ID de paiement invalide
+- **404** : Paiement non trouvé ou déjà traité
+- **500** : Erreur lors du traitement du paiement
+
+### GET `/payments`
+
+Liste tous les paiements effectués.
+
+**🔒 Authentification :** Token Admin requis
+
+**📝 Headers :**
+```
+Authorization: Bearer {admin_token}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+[
+  {
+    "id": 123,
+    "user": {
+      "id": 1,
+      "email": "user@example.com",
+      "fullName": "John Doe"
+    },
+    "amount": "10.00",
+    "status": "success",
+    "paymentMethod": "card",
+    "transactionReference": "TXN-abc123def",
+    "createdAt": "2026-02-13T10:30:00+00:00"
+  }
+]
+```
+
+---
+
+## 🎫 VALIDATION DES CODES D'ACCÈS
+
+### POST `/validate`
+
+Valide un code d'accès et génère un token temporaire pour l'accès live.
+
+**🔓 Authentification :** Non requise
+
+**📝 Corps de la requête :**
+```json
+{
+  "code": "CINE-A1B2C3D4"
+}
+```
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `code` | string | ✅ | Code d'accès au format CINE-XXXXXXXX |
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "expiresIn": 300,
+  "message": "Access code validated successfully"
+}
+```
+
+**📋 Actions effectuées :**
+1. Le code est marqué comme utilisé
+2. L'utilisateur est marqué comme en ligne
+3. Un token JWT temporaire (5 minutes) est généré
+
+**❌ Réponses d'erreur :**
+- **400** : Code invalide, expiré ou déjà utilisé
+- **500** : Erreur lors de la génération du token
+
+### GET `/access_codes`
+
+Liste tous les codes d'accès générés.
+
+**🔒 Authentification :** Token Admin requis
+
+**📝 Headers :**
+```
+Authorization: Bearer {admin_token}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+[
+  {
+    "id": 1,
+    "user": {
+      "id": 1,
+      "email": "user@example.com"
+    },
+    "code": "CINE-A1B2C3D4",
+    "isUsed": true,
+    "usedAt": "2026-02-13T10:35:00+00:00",
+    "expiresAt": "2026-02-14T10:30:00+00:00",
+    "createdAt": "2026-02-13T10:30:00+00:00"
+  }
+]
 ```
 
 ---
@@ -365,7 +633,7 @@ Liste tous les codes d'accès.
 
 ### PUT `/admin/event/update-stream`
 
-Met à jour l'URL du stream (sera automatiquement chiffrée).
+Met à jour l'URL du stream avec sécurité renforcée (chiffrement AES-256, validation HTTPS uniquement).
 
 **🔒 Authentification :** Token Admin requis
 
@@ -379,9 +647,55 @@ Met à jour l'URL du stream (sera automatiquement chiffrée).
 **✅ Réponse de succès (200) :**
 ```json
 {
-  "message": "Stream URL updated successfully"
+  "message": "Stream URL updated and encrypted successfully",
+  "updatedAt": "2026-02-13T14:30:00+00:00",
+  "streamId": "STREAM-ABC123",
+  "securityLevel": "HIGH"
 }
 ```
+
+**❌ Réponses d'erreur :**
+- **400** : URL invalide ou non-HTTPS
+- **404** : Événement introuvable
+- **500** : Erreur de chiffrement
+
+### POST `/admin/stream/secure-access`
+
+**Accès ultra-sécurisé au streaming** avec double authentification :
+- Token Admin (vous)
+- Token Live Access (utilisateur)
+- Validation temps réel
+- Audit complet
+
+**🔒 Authentification :** Token Admin requis
+
+**📝 Corps de la requête :**
+```json
+{
+  "liveToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "userId": 123,
+  "sessionId": "SESSION-ABC123"
+}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "streamUrl": "https://real-stream-url.com/live",
+  "title": "Concert Live - Artiste Mystère",
+  "accessGranted": true,
+  "expiresIn": 300,
+  "securityLevel": "MAXIMUM",
+  "userValidated": true,
+  "sessionId": "SESSION-ABC123",
+  "accessTimestamp": 1770945600
+}
+```
+
+**❌ Réponses d'erreur :**
+- **400** : Paramètres de sécurité manquants
+- **403** : Token invalide ou accès refusé
+- **404** : Utilisateur ou événement introuvable
 
 ### PUT `/admin/event/activate`
 
@@ -412,9 +726,11 @@ Active ou désactive l'événement de streaming.
 ```json
 {
   "id": "integer",
-  "email": "string (unique)",
+  "email": "string (unique, nullable)",
   "fullName": "string (2-255 chars)",
   "phone": "string (nullable)",
+  "isOnline": "boolean",
+  "lastActivity": "datetime (nullable)",
   "createdAt": "datetime"
 }
 ```
@@ -486,13 +802,19 @@ Active ou désactive l'événement de streaming.
 
 ### Erreurs Spécifiques
 
+#### Utilisateurs
+- `Invalid user data` (400)
+- `User not found` (404)
+
 #### Paiement
 - `Payment not found or already processed` (404)
 - `Invalid payment data` (400)
+- `Payment processing failed` (500)
 
 #### Code d'accès
 - `Invalid or expired access code` (400)
 - `Code already used` (400)
+- `Access code validation failed` (500)
 
 #### Live
 - `No active live event` (404)
@@ -501,12 +823,13 @@ Active ou désactive l'événement de streaming.
 #### Administration
 - `No live event found` (404)
 - `Failed to encrypt stream URL` (500)
+- `Invalid admin credentials` (401)
 
 ---
 
 ## 🔄 FLOWS UTILISATEUR
 
-### Flow d'Achat Complet
+### Flow d'Achat Complet (Nouveau Système)
 
 ```mermaid
 sequenceDiagram
@@ -519,25 +842,62 @@ sequenceDiagram
     A->>DB: Récupérer événement
     A->>F: Données de l'événement
 
+    U->>F: Formulaire d'enregistrement
+    F->>A: POST /api/register
+    A->>DB: Créer ou récupérer User
+    A->>F: Confirmation enregistrement
+
     U->>F: Soumettre formulaire paiement
-    F->>A: POST /api/payment/initiate
-    A->>DB: Créer User et Payment
+    F->>A: POST /api/payments/initiate
+    A->>DB: Créer Payment
     A->>F: paymentId
 
-    Note over F: Simulation paiement réussi
-    F->>A: POST /api/payment/confirm
-    A->>DB: Marquer paiement success
-    A->>DB: Générer AccessCode
-    A->>F: Confirmation
+    Note over F: Paiement FlexPay (mobile/carte)
+    F->>A: POST /api/payments/confirm
+    A->>A: Intégrer FlexPay
+    A->>DB: Marquer paiement success + Générer AccessCode
+    A->>F: Confirmation + Code d'accès
 
     U->>F: Saisir code d'accès
-    F->>A: POST /api/code/validate
-    A->>DB: Valider et marquer code utilisé
-    A->>F: Token JWT temporaire
+    F->>A: POST /api/validate
+    A->>DB: Valider code + Marquer user online
+    A->>F: Token JWT temporaire (5 min)
 
     F->>A: GET /api/live/watch (avec token)
     A->>DB: Vérifier token et déchiffrer URL
     A->>F: URL du stream
+```
+
+### Flow d'Administration Complet
+
+```mermaid
+sequenceDiagram
+    participant A as Admin
+    participant API as API Admin
+    participant DB as Base de données
+
+    A->>API: POST /auth/admin
+    API->>API: Générer token JWT
+    API->>A: Token admin (1 heure)
+
+    A->>API: GET /api/users (avec token)
+    API->>DB: Récupérer users avec statuts
+    API->>A: Liste utilisateurs + statuts online
+
+    A->>API: GET /api/payments (avec token)
+    API->>DB: Récupérer paiements
+    API->>A: Liste paiements avec statuts
+
+    A->>API: GET /api/access_codes (avec token)
+    API->>DB: Récupérer codes d'accès
+    API->>A: Liste codes avec statuts
+
+    A->>API: PUT /admin/event/update-stream (avec token)
+    API->>API: Chiffrer URL
+    API->>DB: Sauvegarder URL chiffrée
+
+    A->>API: PUT /admin/event/activate (avec token)
+    API->>DB: Activer/désactiver événement
 ```
 
 ### Flow Administrateur
@@ -576,35 +936,64 @@ sequenceDiagram
 }
 ```
 
-### Exemple complet de session utilisateur
+### Exemple complet de session utilisateur (Nouveau Système)
 
 ```bash
 # 1. Obtenir les infos de l'événement
 curl -X GET http://localhost:8000/api/event
 
-# 2. Initier un paiement
-curl -X POST http://localhost:8000/api/payment/initiate \
+# 2. S'enregistrer (ou récupérer utilisateur existant)
+curl -X POST http://localhost:8000/api/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fullName": "Test User",
+    "phone": "243999999999"
+  }'
+
+# 3. Initier un paiement
+curl -X POST http://localhost:8000/api/payments/initiate \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
     "fullName": "Test User",
-    "phone": "+243123456789",
+    "phone": "243999999999",
     "paymentMethod": "card"
   }'
 
-# 3. Confirmer le paiement (simulé)
-curl -X POST http://localhost:8000/api/payment/confirm \
+# 4. Confirmer le paiement (avec FlexPay)
+curl -X POST http://localhost:8000/api/payments/confirm \
   -H "Content-Type: application/json" \
   -d '{"paymentId": 1}'
 
-# 4. Valider le code d'accès
-curl -X POST http://localhost:8000/api/code/validate \
+# 5. Valider le code d'accès généré
+curl -X POST http://localhost:8000/api/validate \
   -H "Content-Type: application/json" \
   -d '{"code": "CINE-A1B2C3D4"}'
 
-# 5. Accéder au live avec le token
+# 6. Accéder au live avec le token
 curl -X GET http://localhost:8000/api/live/watch \
   -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+```
+
+### Tests d'Administration
+
+```bash
+# 1. Connexion admin
+curl -X POST http://localhost:8080/auth/admin \
+  -H "Content-Type: application/json" \
+  -d '{"username": "fils@cinefilm.cd", "password": "p@ssword123654"}'
+
+# 2. Lister utilisateurs avec statuts
+curl -X GET http://localhost:8080/api/users \
+  -H "Authorization: Bearer {admin_token}"
+
+# 3. Lister paiements
+curl -X GET http://localhost:8080/api/payments \
+  -H "Authorization: Bearer {admin_token}"
+
+# 4. Lister codes d'accès
+curl -X GET http://localhost:8080/api/access_codes \
+  -H "Authorization: Bearer {admin_token}"
 ```
 
 ---
@@ -632,6 +1021,29 @@ CORS_ALLOW_ORIGIN=*
 - **HTTPS** : Obligatoire en production
 - **Logs** : Erreurs automatiquement loggées
 - **Monitoring** : À implémenter selon les besoins
+
+### Services Intégrés
+
+- **FlexPay** : Service de paiement mobile et carte bancaire
+- **API Platform** : Framework API avec documentation automatique
+- **LexikJWT** : Gestion des tokens JWT
+- **Doctrine ORM** : Mapping objet-relationnel
+
+### Intégration FlexPay
+
+Le service de paiement FlexPay est configuré avec :
+
+```php
+// Configuration dans src/Service/Billing/PaymentService.php
+private $mobileBaseUrlFlexPay = 'https://backend.flexpay.cd/api/rest/v1/';
+private $cardBaseUrlFlexPay = 'https://cardpayment.flexpay.cd/v1.1/pay';
+private $token = 'Bearer {token_flexpay}';
+
+// Méthodes disponibles :
+- mobilePayment($operation) : Paiement mobile
+- cardPayment($operation) : Paiement carte
+- checkPaymentStatus($operation) : Vérification statut
+```
 
 ### Performance
 
@@ -721,10 +1133,13 @@ Les erreurs sont automatiquement loggées dans `var/log/dev.log` (dev) ou `var/l
 
 ### ✅ Fonctionnalités Core
 - [x] Événement public accessible
-- [x] Paiement avec génération de code
-- [x] Validation de code avec token temporaire
-- [x] Accès live sécurisé
+- [x] Enregistrement utilisateurs avec statuts en ligne
+- [x] Paiement intégré avec FlexPay (mobile/carte)
+- [x] Validation de code avec génération automatique
+- [x] Accès live sécurisé avec tokens temporaires
 - [x] Panel d'administration complet
+- [x] API Platform avec documentation Swagger
+- [x] Gestion complète des spectateurs et paiements
 
 ### ✅ Sécurité
 - [x] JWT pour l'administration
@@ -742,4 +1157,36 @@ Les erreurs sont automatiquement loggées dans `var/log/dev.log` (dev) ou `var/l
 
 ---
 
-**🎉 L'API est maintenant complètement documentée et prête pour l'intégration frontend !**
+---
+
+## 📋 RÉSUMÉ DES NOUVEAUX ENDPOINTS
+
+### 🎯 Tous les Endpoints Demandés Implémentés
+
+| Endpoint | Méthode | Description | Authentification |
+|----------|---------|-------------|------------------|
+| `POST /api/register` | Enregistrement utilisateur | fullname, email?, phone | Non requise |
+| `GET /api/users` | Liste utilisateurs + statuts | isOnline, lastActivity | Admin requis |
+| `POST /api/payments/initiate` | Initier paiement | FlexPay integration | Non requise |
+| `POST /api/payments/confirm` | Confirmer paiement | Génère code automatiquement | Non requise |
+| `GET /api/payments` | Liste paiements | Tous les paiements système | Admin requis |
+| `POST /api/validate` | Valider code accès | Génère token live | Non requise |
+| `GET /api/access_codes` | Liste codes accès | Tous les codes générés | Admin requis |
+| `POST /auth/admin` | Login administrateur | Retourne token JWT | Non requise |
+
+### 🏗️ Architecture Complète
+
+- **API Platform** : Framework moderne avec opérations personnalisées
+- **DTOs** : Objets de transfert validés pour chaque endpoint
+- **Contrôleurs** : Logique métier séparée et réutilisable
+- **Services** : Intégration FlexPay et logique métier
+- **Entités** : Modèles enrichis avec statuts en ligne
+
+### 📚 Documentation Complète
+
+- **API.md** : Cette documentation complète
+- **ENDPOINTS.md** : Guide détaillé des nouveaux endpoints
+- **README.md** : Guide de démarrage et configuration
+- **Swagger UI** : Documentation interactive à `/api/docs`
+
+**🎉 L'API complète de live streaming payant est maintenant 100% opérationnelle avec tous les endpoints demandés !**

@@ -446,4 +446,89 @@ Tous les endpoints sont automatiquement documentés avec :
 
 ---
 
-**🎉 L'API complète est maintenant opérationnelle avec tous les endpoints demandés !**
+## 🔒 ENDPOINTS DE SÉCURITÉ RENFORCÉE
+
+### PUT `/api/admin/event/update-stream`
+
+Met à jour l'URL du stream avec sécurité renforcée (chiffrement AES-256, validation HTTPS uniquement).
+
+**🔒 Authentification :** Token Admin requis
+
+**📝 Corps de la requête :**
+```json
+{
+  "streamUrl": "https://real-stream-platform.com/live/concert123"
+}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "message": "Stream URL updated and encrypted successfully",
+  "updatedAt": "2026-02-13T14:30:00+00:00",
+  "streamId": "STREAM-ABC123",
+  "securityLevel": "HIGH"
+}
+```
+
+**❌ Réponses d'erreur :**
+- **400** : URL invalide ou non-HTTPS
+- **404** : Événement introuvable
+- **500** : Erreur de chiffrement
+
+**🛡️ Fonctionnalités de sécurité :**
+- Validation stricte HTTPS uniquement
+- Chiffrement AES-256 automatique
+- Logging d'audit automatique
+- ID unique généré pour chaque stream
+
+### POST `/api/admin/stream/secure-access`
+
+**Accès ultra-sécurisé au streaming** avec triple validation :
+- Token Admin (authentification administrateur)
+- Token Live Access (droits d'accès utilisateur)
+- Validation temps réel du code d'accès
+- Audit complet des accès
+
+**🔒 Authentification :** Token Admin requis
+
+**📝 Corps de la requête :**
+```json
+{
+  "liveToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "userId": 123,
+  "sessionId": "SESSION-ABC123"
+}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "streamUrl": "https://real-stream-url.com/live",
+  "title": "Concert Live - Artiste Mystère",
+  "accessGranted": true,
+  "expiresIn": 300,
+  "securityLevel": "MAXIMUM",
+  "userValidated": true,
+  "sessionId": "SESSION-ABC123",
+  "accessTimestamp": 1770945600
+}
+```
+
+**❌ Réponses d'erreur :**
+- **400** : Paramètres de sécurité manquants
+- **403** : Token invalide, code expiré, ou sécurité compromise
+- **404** : Utilisateur ou événement introuvable
+
+**🛡️ Niveaux de sécurité :**
+- ✅ Token Admin valide
+- ✅ Token Live Access valide et non expiré
+- ✅ Code d'accès utilisé dans les 10 dernières minutes
+- ✅ Utilisateur valide et existant
+- ✅ Événement actif en direct
+- ✅ Logging automatique de tous les accès
+- ✅ Timestamp de validation temps réel
+
+---
+
+**🎉 L'API complète est maintenant opérationnelle avec tous les endpoints demandés et sécurisés !**

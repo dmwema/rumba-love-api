@@ -43,8 +43,27 @@ La documentation est organisée par tags :
 - ✅ **Codes d'accès** : Génération automatique et validation
 - ✅ **Accès live sécurisé** : Stream protégé avec JWT temporaire
 - ✅ **Administration complète** : Gestion utilisateurs, paiements, codes
-- ✅ **Sécurité** : JWT, chiffrement AES, validation stricte
+- ✅ **Sécurité renforcée** : JWT, chiffrement AES, validation HTTPS, audit logging
 - ✅ **API Platform** : Documentation Swagger automatique
+
+### 🛡️ Nouveaux Endpoints Sécurisés
+
+#### 👥 Gestion Utilisateurs
+- `POST /api/register` - Enregistrement avec gestion doublons
+- `GET /api/users` - Liste avec statuts en ligne (`isOnline`, `lastActivity`)
+
+#### 💰 Paiements FlexPay
+- `POST /api/payments/initiate` - Initiation paiement (mobile/carte)
+- `POST /api/payments/confirm` - Confirmation + génération code automatique
+- `GET /api/payments` - Liste complète paiements (admin)
+
+#### 🎫 Validation Sécurisée
+- `POST /api/validate` - Validation code + token live 5min
+- `GET /api/access_codes` - Liste codes d'accès (admin)
+
+#### 🔒 Sécurité Maximale
+- `PUT /api/admin/event/update-stream` - URL stream chiffrée HTTPS uniquement
+- `POST /api/admin/stream/secure-access` - Accès triple validation (Admin + Live + Temps réel)
 
 ## 🏗️ Architecture
 

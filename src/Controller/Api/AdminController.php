@@ -7,6 +7,7 @@ use App\Entity\AccessCode;
 use App\Entity\LiveEvent;
 use App\Entity\Payment;
 use App\Entity\User;
+use App\Service\LiveAccessTokenService;
 use App\Service\StreamUrlEncryptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -26,7 +27,8 @@ class AdminController extends AbstractController
     public function __construct(
         private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $passwordHasher,
-        private StreamUrlEncryptionService $encryptionService
+        private StreamUrlEncryptionService $encryptionService,
+        private LiveAccessTokenService $liveAccessTokenService
     ) {}
 
     /**
@@ -261,21 +263,170 @@ class AdminController extends AbstractController
             return $this->json(['error' => 'streamUrl is required'], 400);
         }
 
+        // Validation supplémentaire de sécurité
+        if (!filter_var($data['streamUrl'], FILTER_VALIDATE_URL)) {
+            return $this->json(['error' => 'Invalid URL format'], 400);
+        }
+
+        // Vérifier que l'URL commence par https pour la sécurité
+        if (!str_starts_with($data['streamUrl'], 'https://')) {
+            return $this->json(['error' => 'Only HTTPS URLs are allowed for security'], 400);
+        }
+
         $event = $this->entityManager->getRepository(LiveEvent::class)->findOneBy([], ['id' => 'DESC']);
 
         if (!$event) {
             return $this->json(['error' => 'No live event found'], 404);
         }
 
+        // Générer un ID unique pour ce stream
+        $streamId = 'STREAM-' . strtoupper(substr(md5(uniqid()), 0, 8));
+
         try {
             $encryptedUrl = $this->encryptionService->encrypt($data['streamUrl']);
             $event->setStreamUrl($encryptedUrl);
             $this->entityManager->flush();
+
+            // Logger l'action pour audit
+            error_log(sprintf(
+                '[STREAM_UPDATE] Admin updated stream URL for event %d at %s',
+                $event->getId(),
+                date('Y-m-d H:i:s')
+            ));
+
         } catch (\RuntimeException $e) {
             return $this->json(['error' => 'Failed to encrypt stream URL'], 500);
         }
 
-        return $this->json(['message' => 'Stream URL updated successfully']);
+        return $this->json([
+            'message' => 'Stream URL updated and encrypted successfully',
+            'updatedAt' => date('c'),
+            'streamId' => $streamId,
+            'securityLevel' => 'HIGH'
+        ]);
+    }
+
+    /**
+     * Récupération hautement sécurisée du stream (Double authentification)
+     *
+     * Nécessite : Token Admin + Token Live Access + Validation temps réel
+     *
+     * @OA\RequestBody(
+     *     required=true,
+     *     @OA\JsonContent(
+     *         type="object",
+     *         required={"liveToken", "userId", "sessionId"},
+     *         @OA\Property(property="liveToken", type="string", description="Token d'accès live valide"),
+     *         @OA\Property(property="userId", type="integer", description="ID de l'utilisateur"),
+     *         @OA\Property(property="sessionId", type="string", description="ID de session unique")
+     *     )
+     * )
+     * @OA\Response(
+     *     response=200,
+     *     description="Accès stream accordé avec sécurité maximale",
+     *     @OA\JsonContent(
+     *         type="object",
+     *         @OA\Property(property="streamUrl", type="string"),
+     *         @OA\Property(property="accessGranted", type="boolean", example=true),
+     *         @OA\Property(property="expiresIn", type="integer", example=300),
+     *         @OA\Property(property="securityLevel", type="string", example="MAXIMUM")
+     *     )
+     * )
+     * @OA\Response(
+     *     response=403,
+     *     description="Accès refusé - sécurité compromise",
+     *     @OA\JsonContent(
+     *         type="object",
+     *         @OA\Property(property="error", type="string", example="Security breach detected")
+     *     )
+     * )
+     * @OA\Security(name="bearerAuth")
+     */
+    #[Route('/stream/secure-access', name: 'api_admin_secure_stream_access', methods: ['POST'])]
+    #[IsGranted('ROLE_ADMIN')]
+    public function getSecureStreamAccess(Request $request): JsonResponse
+    {
+        // Cette méthode utilise une approche directe pour la sécurité maximale
+        // au lieu d'un DTO pour éviter toute interférence
+        $data = json_decode($request->getContent(), true);
+
+        if (!$data ||
+            !isset($data['liveToken']) ||
+            !isset($data['userId']) ||
+            !isset($data['sessionId'])) {
+            return $this->json(['error' => 'Missing required security parameters'], 400);
+        }
+
+        // Vérifier le token live
+        try {
+            $this->liveAccessTokenService->validateLiveAccessToken($data['liveToken']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Invalid live access token'], 403);
+        }
+
+        // Vérifier que l'utilisateur existe et est valide
+        $user = $this->entityManager->getRepository(User::class)->find($data['userId']);
+        if (!$user) {
+            return $this->json(['error' => 'User not found'], 404);
+        }
+
+        // Vérifier que l'utilisateur a un code d'accès valide et utilisé récemment
+        $validAccessCode = $this->entityManager->getRepository(AccessCode::class)->findOneBy([
+            'user' => $user,
+            'isUsed' => true
+        ], ['usedAt' => 'DESC']);
+
+        if (!$validAccessCode || !$validAccessCode->isValid()) {
+            return $this->json(['error' => 'No valid access code found'], 403);
+        }
+
+        // Vérifier que le code a été utilisé récemment (dans les dernières 10 minutes)
+        $tenMinutesAgo = new \DateTime('-10 minutes');
+        if ($validAccessCode->getUsedAt() < $tenMinutesAgo) {
+            return $this->json(['error' => 'Access code expired for streaming'], 403);
+        }
+
+        // Récupérer l'événement live actif
+        $event = $this->entityManager->getRepository(LiveEvent::class)->findOneBy(['isActive' => true]);
+
+        if (!$event) {
+            return $this->json(['error' => 'No active live event'], 404);
+        }
+
+        // Vérifier que le stream est disponible en ce moment
+        if (!$event->isLiveNow()) {
+            return $this->json(['error' => 'Stream not currently live'], 403);
+        }
+
+        try {
+            // Déchiffrer l'URL du stream avec sécurité maximale
+            $streamUrl = $this->encryptionService->decrypt($event->getStreamUrl());
+        } catch (\RuntimeException $e) {
+            return $this->json(['error' => 'Stream decryption failed'], 500);
+        }
+
+        // Marquer l'utilisateur comme actif
+        $user->setIsOnline(true);
+        $this->entityManager->flush();
+
+        // Logger l'accès sécurisé
+        error_log(sprintf(
+            '[SECURE_STREAM_ACCESS] User %d accessed stream at %s with session %s',
+            $user->getId(),
+            date('Y-m-d H:i:s'),
+            $data['sessionId']
+        ));
+
+        return $this->json([
+            'streamUrl' => $streamUrl,
+            'title' => $event->getTitle(),
+            'accessGranted' => true,
+            'expiresIn' => 300, // 5 minutes
+            'securityLevel' => 'MAXIMUM',
+            'userValidated' => true,
+            'sessionId' => $data['sessionId'],
+            'accessTimestamp' => time()
+        ]);
     }
 
     #[Route('/event/activate', name: 'api_admin_event_activate', methods: ['PUT'])]

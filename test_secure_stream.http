@@ -1,0 +1,94 @@
+# 🛡️ Tests des Endpoints Sécurisés - Live Streaming
+
+### 1. 🔐 Connexion Admin
+POST http://localhost:8080/auth/admin
+Content-Type: application/json
+
+{
+  "username": "fils@cinefilm.cd",
+  "password": "p@ssword123654"
+}
+
+### 2. 📺 Mise à Jour URL Stream (Sécurisée)
+PUT http://localhost:8080/api/admin/event/update-stream
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+
+{
+  "streamUrl": "https://secure-stream-platform.com/live/concert-secret-123"
+}
+
+### 3. 👤 Enregistrement Utilisateur
+POST http://localhost:8080/api/register
+Content-Type: application/json
+
+{
+  "fullName": "Test User",
+  "phone": "243999999999"
+}
+
+### 4. 💳 Initiation Paiement
+POST http://localhost:8080/api/payments/initiate
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "fullName": "Test User",
+  "phone": "243999999999",
+  "paymentMethod": "card"
+}
+
+### 5. ✅ Confirmation Paiement
+POST http://localhost:8080/api/payments/confirm
+Content-Type: application/json
+
+{
+  "paymentId": 1
+}
+
+### 6. 🎫 Validation Code d'Accès
+POST http://localhost:8080/api/validate
+Content-Type: application/json
+
+{
+  "code": "CINE-A1B2C3D4"
+}
+
+### 7. 🔒 Accès Stream Ultra-Sécurisé
+POST http://localhost:8080/api/admin/stream/secure-access
+Content-Type: application/json
+Authorization: Bearer {{admin_token}}
+
+{
+  "liveToken": "{{live_token}}",
+  "userId": 1,
+  "sessionId": "SESSION-SECURE-123"
+}
+
+### 8. 📊 Vérification Statuts Utilisateurs (Admin)
+GET http://localhost:8080/api/users
+Authorization: Bearer {{admin_token}}
+
+### 9. 📋 Liste Paiements (Admin)
+GET http://localhost:8080/api/payments
+Authorization: Bearer {{admin_token}}
+
+### 10. 🎫 Liste Codes d'Accès (Admin)
+GET http://localhost:8080/api/access_codes
+Authorization: Bearer {{admin_token}}
+
+---
+
+## 🔍 Instructions d'utilisation :
+
+1. **Remplacer les variables** :
+   - `{{admin_token}}` : Token obtenu à l'étape 1
+   - `{{live_token}}` : Token obtenu à l'étape 6
+
+2. **Séquence recommandée** :
+   - Admin login → Update stream URL → User registration → Payment → Code validation → Secure stream access
+
+3. **Sécurité maximale** :
+   - L'endpoint `/api/admin/stream/secure-access` nécessite 3 validations simultanées
+   - Logging automatique de tous les accès
+   - Expiration rapide des tokens (5 minutes)
