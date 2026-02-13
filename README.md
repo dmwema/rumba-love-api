@@ -135,7 +135,7 @@ Retourne les informations du concert.
 
 ### 💳 Paiement
 
-#### POST `/api/payment/initiate`
+#### POST `/api/payments/initiate`
 Initie un paiement.
 
 **Corps :**
@@ -159,7 +159,7 @@ Initie un paiement.
 }
 ```
 
-#### POST `/api/payment/confirm`
+#### POST `/api/payments/confirm`
 Confirme un paiement (génère automatiquement un code d'accès).
 
 **Corps :**
@@ -298,8 +298,8 @@ symfony serve
 - GET `/api/event`
 
 ### Flow complet de test
-1. **Initier un paiement** : POST `/api/payment/initiate`
-2. **Confirmer le paiement** : POST `/api/payment/confirm`
+1. **Initier un paiement** : POST `/api/payments/initiate`
+2. **Confirmer le paiement** : POST `/api/payments/confirm`
 3. **Valider le code** : POST `/api/code/validate`
 4. **Accéder au live** : GET `/api/live/watch` (avec token)
 

@@ -63,8 +63,8 @@ La documentation est organisée en sections logiques :
 - `GET /api/event` - Informations du concert
 
 #### 💳 Paiement
-- `POST /api/payment/initiate` - Initier un paiement
-- `POST /api/payment/confirm` - Confirmer un paiement
+- `POST /api/payments/initiate` - Initier un paiement
+- `POST /api/payments/confirm` - Confirmer un paiement
 
 #### 🎫 Validation de Code
 - `POST /api/code/validate` - Valider un code d'accès
@@ -100,7 +100,7 @@ La documentation est organisée en sections logiques :
    - Pas d'authentification requise
 
 2. **Initier un paiement**
-   - Endpoint : `POST /api/payment/initiate`
+   - Endpoint : `POST /api/payments/initiate`
    - Body :
    ```json
    {
@@ -111,7 +111,7 @@ La documentation est organisée en sections logiques :
    ```
 
 3. **Confirmer le paiement**
-   - Endpoint : `POST /api/payment/confirm`
+   - Endpoint : `POST /api/payments/confirm`
    - Body :
    ```json
    {
