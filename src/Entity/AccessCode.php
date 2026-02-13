@@ -46,9 +46,9 @@ class AccessCode
     #[ORM\JoinColumn(nullable: false)]
     private User $user;
 
-    #[ORM\Column(type: 'string', length: 12, unique: true)]
+    #[ORM\Column(type: 'string', length: 15, unique: true)]
     #[Assert\NotBlank]
-    #[Assert\Length(min: 12, max: 12)]
+    #[Assert\Length(min: 12, max: 15)]
     #[Assert\Regex(pattern: '/^[A-Z0-9\-]+$/', message: 'Code must contain only uppercase letters, numbers and dashes')]
     private string $code;
 
@@ -165,7 +165,8 @@ class AccessCode
         $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         $code = $prefix;
 
-        for ($i = 0; $i < 8; $i++) {
+        // Génère exactement 7 caractères pour faire 12 au total ('CINE-' = 5 + 7 = 12)
+        for ($i = 0; $i < 7; $i++) {
             $code .= $characters[rand(0, strlen($characters) - 1)];
         }
 
