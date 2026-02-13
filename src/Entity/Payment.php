@@ -11,11 +11,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new \ApiPlatform\Metadata\GetCollection(
-            security: "is_granted('ROLE_ADMIN')",
+            // security: "is_granted('ROLE_ADMIN')",
             description: 'Lister tous les paiements'
         ),
         new \ApiPlatform\Metadata\Get(
-            security: "is_granted('ROLE_ADMIN')",
+            // security: "is_granted('ROLE_ADMIN')",
             description: 'Obtenir un paiement spécifique'
         ),
         new \ApiPlatform\Metadata\Post(

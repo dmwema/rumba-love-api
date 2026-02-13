@@ -10,7 +10,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Table(name: 'live_events')]
 #[ApiResource(
     operations: [],
-    security: "is_granted('ROLE_ADMIN')",
+    // security: "is_granted('ROLE_ADMIN')",
     description: 'Entité représentant un événement de live streaming'
 )]
 class LiveEvent
