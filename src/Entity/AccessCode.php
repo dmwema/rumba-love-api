@@ -10,7 +10,28 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Table(name: 'access_codes')]
 #[ORM\Index(columns: ['code'], name: 'code_idx')]
 #[ApiResource(
-    operations: [],
+    operations: [
+        new \ApiPlatform\Metadata\GetCollection(
+            security: "is_granted('ROLE_ADMIN')",
+            description: 'Lister tous les codes d\'accès'
+        ),
+        new \ApiPlatform\Metadata\Get(
+            security: "is_granted('ROLE_ADMIN')",
+            description: 'Obtenir un code d\'accès spécifique'
+        ),
+        new \ApiPlatform\Metadata\Post(
+            uriTemplate: '/validate',
+            controller: \App\Controller\CodeController::class,
+            input: \App\DTO\CodeValidationRequest::class,
+            output: \App\DTO\CodeValidationResponse::class,
+            read: false,
+            deserialize: true,
+            validate: true,
+            write: false,
+            status: 200,
+            description: 'Valider un code d\'accès et obtenir un token live'
+        )
+    ],
     security: "is_granted('ROLE_ADMIN')",
     description: 'Entité représentant un code d\'accès unique pour accéder au live streaming'
 )]

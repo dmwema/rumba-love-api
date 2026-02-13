@@ -16,22 +16,35 @@ use Symfony\Component\Validator\Constraints as Assert;
     operations: [
         new \ApiPlatform\Metadata\GetCollection(
             security: "is_granted('ROLE_ADMIN')",
-            description: 'Lister tous les utilisateurs (admin seulement)'
+            description: 'Lister tous les utilisateurs avec leur statut en ligne'
         ),
         new \ApiPlatform\Metadata\Get(
             security: "is_granted('ROLE_ADMIN')",
-            description: 'Obtenir un utilisateur spécifique (admin seulement)'
+            description: 'Obtenir un utilisateur spécifique'
+        ),
+        new \ApiPlatform\Metadata\Post(
+            uriTemplate: '/register',
+            controller: \App\Controller\UserController::class,
+            input: \App\DTO\UserRegistrationRequest::class,
+            output: \App\DTO\UserResponse::class,
+            read: false,
+            deserialize: true,
+            validate: true,
+            write: false,
+            status: 201,
+            description: 'Enregistrer un nouvel utilisateur'
         ),
         new \ApiPlatform\Metadata\Post(
             uriTemplate: '/login',
             controller: \App\Controller\AuthController::class,
             input: \App\DTO\LoginRequest::class,
-            output: false,
+            output: \App\DTO\LoginResponse::class,
             read: false,
             deserialize: true,
             validate: true,
             write: false,
-            status: 200
+            status: 200,
+            description: 'Authentifier un utilisateur'
         )
     ],
     security: "is_granted('ROLE_ADMIN')",
@@ -58,6 +71,12 @@ class User
     #[Assert\Regex(pattern: '/^\+?[0-9\s\-\(\)]+$/', message: 'Invalid phone number format')]
     private ?string $phone = null;
 
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    private ?\DateTimeInterface $lastActivity = null;
+
+    #[ORM\Column(type: 'boolean')]
+    private bool $isOnline = false;
+
     #[ORM\Column(type: 'datetime')]
     private \DateTimeInterface $createdAt;
 
@@ -78,6 +97,7 @@ class User
         $this->createdAt = new \DateTime();
         $this->payments = new ArrayCollection();
         $this->accessCodes = new ArrayCollection();
+        $this->isOnline = false;
     }
 
     public function getId(): ?int
@@ -127,6 +147,40 @@ class User
     {
         $this->createdAt = $createdAt;
         return $this;
+    }
+
+    public function getLastActivity(): ?\DateTimeInterface
+    {
+        return $this->lastActivity;
+    }
+
+    public function setLastActivity(?\DateTimeInterface $lastActivity): self
+    {
+        $this->lastActivity = $lastActivity;
+        return $this;
+    }
+
+    public function isOnline(): bool
+    {
+        return $this->isOnline;
+    }
+
+    public function setIsOnline(bool $isOnline): self
+    {
+        $this->isOnline = $isOnline;
+        $this->lastActivity = $isOnline ? new \DateTime() : $this->lastActivity;
+        return $this;
+    }
+
+    public function isCurrentlyOnline(): bool
+    {
+        if (!$this->lastActivity) {
+            return false;
+        }
+
+        // Considérer en ligne si activité dans les dernières 5 minutes
+        $fiveMinutesAgo = new \DateTime('-5 minutes');
+        return $this->lastActivity > $fiveMinutesAgo;
     }
 
     /**

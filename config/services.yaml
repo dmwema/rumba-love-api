@@ -27,5 +27,10 @@ services:
         tags:
             - { name: security.voter }
 
+    App\Controller\AuthController:
+        arguments:
+            - '@lexik_jwt_authentication.jwt_manager'
 
-    App\Security\TestJwtAuthenticator: ~
+    App\Controller\UserController: ~
+    App\Controller\PaymentController: ~
+    App\Controller\CodeController: ~

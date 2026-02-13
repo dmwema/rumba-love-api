@@ -2,7 +2,14 @@
 
 API complète pour gérer un système de live streaming payant avec génération de codes d'accès uniques.
 
-## 📖 Documentation Interactive
+## 📖 Documentation
+
+### Documentation Complète
+- **[ENDPOINTS.md](ENDPOINTS.md)** - Documentation détaillée de tous les nouveaux endpoints
+- **[API.md](API.md)** - Documentation technique complète de l'API
+- **[SWAGGER_README.md](SWAGGER_README.md)** - Guide d'utilisation de Swagger
+
+### Documentation Interactive
 
 ### 🔗 Accès à la documentation Swagger/OpenAPI
 
@@ -30,11 +37,14 @@ La documentation est organisée par tags :
 ## 🚀 Fonctionnalités
 
 - ✅ **Événement public** : Affichage des informations du concert
-- ✅ **Paiement** : Initiation et confirmation de paiements
-- ✅ **Codes d'accès** : Génération et validation de codes uniques
+- ✅ **Inscription utilisateurs** : Enregistrement avec fullname, email optionnel, téléphone
+- ✅ **Statuts utilisateurs** : Suivi en ligne/hors ligne avec dernière activité
+- ✅ **Paiement intégré** : Initiation et confirmation avec FlexPay
+- ✅ **Codes d'accès** : Génération automatique et validation
 - ✅ **Accès live sécurisé** : Stream protégé avec JWT temporaire
-- ✅ **Administration** : Gestion complète pour les admins
+- ✅ **Administration complète** : Gestion utilisateurs, paiements, codes
 - ✅ **Sécurité** : JWT, chiffrement AES, validation stricte
+- ✅ **API Platform** : Documentation Swagger automatique
 
 ## 🏗️ Architecture
 

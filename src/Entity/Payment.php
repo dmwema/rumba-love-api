@@ -9,7 +9,40 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity]
 #[ORM\Table(name: 'payments')]
 #[ApiResource(
-    operations: [],
+    operations: [
+        new \ApiPlatform\Metadata\GetCollection(
+            security: "is_granted('ROLE_ADMIN')",
+            description: 'Lister tous les paiements'
+        ),
+        new \ApiPlatform\Metadata\Get(
+            security: "is_granted('ROLE_ADMIN')",
+            description: 'Obtenir un paiement spécifique'
+        ),
+        new \ApiPlatform\Metadata\Post(
+            uriTemplate: '/initiate',
+            controller: \App\Controller\PaymentController::class,
+            input: \App\DTO\PaymentInitiateRequest::class,
+            output: \App\DTO\PaymentResponse::class,
+            read: false,
+            deserialize: true,
+            validate: true,
+            write: false,
+            status: 201,
+            description: 'Initier un paiement'
+        ),
+        new \ApiPlatform\Metadata\Post(
+            uriTemplate: '/confirm',
+            controller: \App\Controller\PaymentController::class,
+            input: \App\DTO\PaymentConfirmRequest::class,
+            output: \App\DTO\PaymentResponse::class,
+            read: false,
+            deserialize: true,
+            validate: true,
+            write: false,
+            status: 200,
+            description: 'Confirmer un paiement'
+        )
+    ],
     security: "is_granted('ROLE_ADMIN')",
     description: 'Entité représentant un paiement effectué par un utilisateur'
 )]
