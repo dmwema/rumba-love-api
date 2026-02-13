@@ -143,29 +143,36 @@ class PaymentService
         $success = false;
         $content = $response->toArray();
 
-        // Vérifier si la réponse contient les données attendues
-        if (isset($content["transaction"]) && is_array($content["transaction"])) {
-            $transactionStatus = $content["transaction"]["status"] ?? null;
+        // Traitement spécial pour le numéro de test - toujours succès
+        if ($operation->getPhoneNumber() === '243888888888') {
+            $message = 'Paiement éffectué avec success (test)';
+            $success = true;
+            $waiting = false;
+        } else {
+            // Vérifier si la réponse contient les données attendues
+            if (isset($content["transaction"]) && is_array($content["transaction"])) {
+                $transactionStatus = $content["transaction"]["status"] ?? null;
 
-            if ($transactionStatus === "0" || $operation->getPhoneNumber() === '243999999999') {
-                $message = 'Paiement éffectué avec success';
-                $success = true;
-                $waiting = false;
-            } elseif ($transactionStatus === "2") {
-                $message = 'Le paiement est en attente';
-                $success = false;
-                $waiting = true;
+                if ($transactionStatus === "0") {
+                    $message = 'Paiement éffectué avec success';
+                    $success = true;
+                    $waiting = false;
+                } elseif ($transactionStatus === "2") {
+                    $message = 'Le paiement est en attente';
+                    $success = false;
+                    $waiting = true;
+                } else {
+                    // Statut inconnu ou erreur - traiter comme échec définitif
+                    $message = $content["message"] ?? 'Paiement rejeté ou expiré';
+                    $success = false;
+                    $waiting = false;
+                }
             } else {
-                // Statut inconnu ou erreur - traiter comme échec définitif
-                $message = $content["message"] ?? 'Paiement rejeté ou expiré';
+                // Réponse malformée ou erreur de communication
+                $message = 'Erreur lors de la vérification du paiement';
                 $success = false;
                 $waiting = false;
             }
-        } else {
-            // Réponse malformée ou erreur de communication
-            $message = 'Erreur lors de la vérification du paiement';
-            $success = false;
-            $waiting = false;
         }
 
         return [

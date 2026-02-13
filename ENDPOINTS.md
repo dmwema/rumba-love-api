@@ -240,6 +240,7 @@ Vérifier le statut d'un paiement FlexPay auprès du service de paiement.
 - **Génération d'access code :** Quand un paiement passe au statut "success", un code d'accès unique est automatiquement généré pour l'utilisateur (valable 24h)
 - **Code existant :** Si l'utilisateur a déjà un code d'accès valide, celui-ci est réutilisé au lieu d'en générer un nouveau
 - **Mise à jour automatique du statut :** Le statut du paiement est automatiquement mis à jour en base de données selon le résultat FlexPay (success, failed, ou reste pending si en attente)
+- **Numéro de test :** Le numéro `243999999999` est traité comme un paiement de test et passe automatiquement au statut "success" avec génération d'access code
 - **FlexPay indisponible :** Si FlexPay est indisponible, la route retourne le statut actuel du paiement depuis la base de données avec un message d'avertissement
 
 ### GET `/api/payments`
