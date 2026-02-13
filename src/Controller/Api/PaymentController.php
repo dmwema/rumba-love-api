@@ -422,8 +422,9 @@ class PaymentController extends AbstractController
                 'trace' => $e->getTraceAsString()
             ]);
 
+
             return $this->json([
-                'error' => 'Internal server error',
+                'error' => 'Internal server error' . $e->getMessage(),
                 'message' => 'Failed to check payment status',
                 'reference' => 'CHK-' . time()
             ], 500);
