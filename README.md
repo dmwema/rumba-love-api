@@ -61,9 +61,20 @@ La documentation est organisée par tags :
 - `POST /api/validate` - Validation code + token live 5min
 - `GET /api/access_codes` - Liste codes d'accès (admin)
 
-#### 🔒 Sécurité Maximale
-- `PUT /api/admin/event/update-stream` - URL stream chiffrée HTTPS uniquement
-- `POST /api/admin/stream/secure-access` - Accès triple validation (Admin + Live + Temps réel)
+#### 🎬 Accès Stream Simplifié
+- `GET /api/live/watch` - Accès stream via variable d'environnement `STREAM_URL`
+- Configuration sans base de données, directement via `.env.local`
+
+### 🎯 Configuration du Stream
+
+L'URL du stream live est configurée via la variable d'environnement `STREAM_URL` :
+
+```bash
+# Dans .env.local
+STREAM_URL=https://votre-plateforme-stream.com/live/concert
+```
+
+**Voir [STREAM_CONFIG_README.md](STREAM_CONFIG_README.md) pour la configuration complète.**
 
 ## 🏗️ Architecture
 

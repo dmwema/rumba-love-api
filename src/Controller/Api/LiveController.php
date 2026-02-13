@@ -66,24 +66,27 @@ class LiveController extends AbstractController
         // Le token JWT est automatiquement validé par le système de sécurité
         // avec #[IsGranted('ROLE_LIVE_ACCESS')]
 
-        // Récupérer l'événement live actif
-        $event = $this->entityManager->getRepository(LiveEvent::class)->findOneBy(['isActive' => true]);
+        // Récupérer l'URL du stream depuis la variable d'environnement
+        $streamUrl = $_ENV['STREAM_URL'] ?? getenv('STREAM_URL');
 
-        if (!$event) {
-            return $this->json(['error' => 'No active live event'], 404);
+        if (!$streamUrl) {
+            return $this->json(['error' => 'Stream URL not configured'], 500);
         }
 
-        try {
-            // Déchiffrer l'URL du stream
-            $streamUrl = $this->encryptionService->decrypt($event->getStreamUrl());
-        } catch (\RuntimeException $e) {
-            return $this->json(['error' => 'Unable to access stream'], 500);
+        // Validation basique de l'URL
+        if (!filter_var($streamUrl, FILTER_VALIDATE_URL)) {
+            return $this->json(['error' => 'Invalid stream URL configuration'], 500);
         }
+
+        // Pour l'instant, on considère que le stream est toujours actif
+        // TODO: Ajouter une logique pour vérifier si le stream est réellement en ligne
+        $isLive = true;
 
         return $this->json([
             'streamUrl' => $streamUrl,
-            'title' => $event->getTitle(),
-            'isLive' => $event->isLiveNow()
+            'title' => 'Concert Live Streaming',
+            'isLive' => $isLive,
+            'message' => 'Stream access granted'
         ]);
     }
 }

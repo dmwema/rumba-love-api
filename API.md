@@ -293,6 +293,40 @@ Authorization: Bearer {admin_token}
 
 ---
 
+## 🎬 ACCÈS AU STREAM LIVE
+
+### GET `/live/watch`
+
+Accès au stream live avec authentification par token d'accès live.
+
+**🔒 Authentification :** Token d'accès live requis (obtenu via validation de code)
+
+**📝 Headers :**
+```
+Authorization: Bearer {live_access_token}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "streamUrl": "https://configured-stream-url.com/live",
+  "title": "Concert Live Streaming",
+  "isLive": true,
+  "message": "Stream access granted"
+}
+```
+
+**📋 Configuration :**
+- L'URL du stream est configurée via la variable d'environnement `STREAM_URL`
+- Pas d'accès base de données requis
+- Validation automatique de l'URL au démarrage
+
+**❌ Réponses d'erreur :**
+- **401** : Token manquant ou invalide
+- **500** : URL du stream non configurée
+
+---
+
 ## 🎫 VALIDATION DES CODES D'ACCÈS
 
 ### POST `/validate`
@@ -631,71 +665,36 @@ Liste tous les codes d'accès.
 ]
 ```
 
-### PUT `/admin/event/update-stream`
+### PUT `/admin/event/update-stream` (OBSOLÈTE)
 
-Met à jour l'URL du stream avec sécurité renforcée (chiffrement AES-256, validation HTTPS uniquement).
-
-**🔒 Authentification :** Token Admin requis
-
-**📝 Corps de la requête :**
-```json
-{
-  "streamUrl": "https://real-stream-platform.com/live/concert123"
-}
-```
-
-**✅ Réponse de succès (200) :**
-```json
-{
-  "message": "Stream URL updated and encrypted successfully",
-  "updatedAt": "2026-02-13T14:30:00+00:00",
-  "streamId": "STREAM-ABC123",
-  "securityLevel": "HIGH"
-}
-```
-
-**❌ Réponses d'erreur :**
-- **400** : URL invalide ou non-HTTPS
-- **404** : Événement introuvable
-- **500** : Erreur de chiffrement
-
-### POST `/admin/stream/secure-access`
-
-**Accès ultra-sécurisé au streaming** avec double authentification :
-- Token Admin (vous)
-- Token Live Access (utilisateur)
-- Validation temps réel
-- Audit complet
+**Cette endpoint est maintenant OBSOLÈTE.** L'URL du stream est configurée via la variable d'environnement `STREAM_URL`.
 
 **🔒 Authentification :** Token Admin requis
 
-**📝 Corps de la requête :**
+**✅ Réponse informative (200) :**
 ```json
 {
-  "liveToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "userId": 123,
-  "sessionId": "SESSION-ABC123"
+  "message": "Stream URL is configured via STREAM_URL environment variable",
+  "currentUrl": "https://configured-stream-url.com/live",
+  "configMethod": "environment_variable",
+  "note": "Modify the STREAM_URL environment variable to change the stream URL"
 }
 ```
 
-**✅ Réponse de succès (200) :**
+### POST `/admin/stream/secure-access` (OBSOLÈTE)
+
+**Cette endpoint est maintenant OBSOLÈTE.** Utilisez directement `GET /api/live/watch` avec le token d'accès live.
+
+**🔒 Authentification :** Token Admin requis
+
+**✅ Réponse informative (200) :**
 ```json
 {
-  "streamUrl": "https://real-stream-url.com/live",
-  "title": "Concert Live - Artiste Mystère",
-  "accessGranted": true,
-  "expiresIn": 300,
-  "securityLevel": "MAXIMUM",
-  "userValidated": true,
-  "sessionId": "SESSION-ABC123",
-  "accessTimestamp": 1770945600
+  "message": "Use GET /api/live/watch with live access token",
+  "streamEndpoint": "/api/live/watch",
+  "note": "Stream URL is configured via STREAM_URL environment variable"
 }
 ```
-
-**❌ Réponses d'erreur :**
-- **400** : Paramètres de sécurité manquants
-- **403** : Token invalide ou accès refusé
-- **404** : Utilisateur ou événement introuvable
 
 ### PUT `/admin/event/activate`
 
