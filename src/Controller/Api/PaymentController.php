@@ -128,6 +128,7 @@ class PaymentController extends AbstractController
                 $payment->setUser($user);
                 $payment->setAmount('5.00');
                 $payment->setPaymentMethod($paymentMethod);
+                $payment->setPhoneNumber($phone);
                 $payment->setStatus('pending');
                 $payment->setCreatedAt(new \DateTime());
 
@@ -293,7 +294,7 @@ class PaymentController extends AbstractController
             }
 
             // Créer l'objet operation pour FlexPay (même interface que pour les autres méthodes)
-            $operation = new class($orderNumber, $payment->getPaymentMethod() === 'mobile' ? $payment->getUser()->getPhone() : '243988888888') {
+            $operation = new class($orderNumber, $payment->getPhoneNumber()) {
                 private $orderNumber;
                 private $phoneNumber;
 

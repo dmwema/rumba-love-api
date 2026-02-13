@@ -77,6 +77,10 @@ class Payment
     #[Assert\Choice(choices: [self::PAYMENT_METHOD_CARD, self::PAYMENT_METHOD_MOBILE])]
     private string $paymentMethod;
 
+    #[ORM\Column(type: 'string', length: 20)]
+    #[Assert\NotBlank]
+    private string $phoneNumber;
+
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $transactionReference = null;
 
@@ -87,6 +91,7 @@ class Payment
     {
         $this->createdAt = new \DateTime();
         $this->status = self::STATUS_PENDING;
+        $this->phoneNumber = '';
     }
 
     public function getId(): ?int
@@ -135,6 +140,17 @@ class Payment
     public function setPaymentMethod(string $paymentMethod): self
     {
         $this->paymentMethod = $paymentMethod;
+        return $this;
+    }
+
+    public function getPhoneNumber(): string
+    {
+        return $this->phoneNumber;
+    }
+
+    public function setPhoneNumber(string $phoneNumber): self
+    {
+        $this->phoneNumber = $phoneNumber;
         return $this;
     }
 

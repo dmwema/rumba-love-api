@@ -28,7 +28,7 @@ Enregistre un nouvel utilisateur ou retourne l'utilisateur existant s'il est dé
 |-----------|------|--------|-------------|
 | `fullName` | string | ✅ | Nom complet de l'utilisateur |
 | `email` | string | ❌ | Adresse email (optionnel) |
-| `phone` | string | ✅ | Numéro de téléphone |
+| `phone` | string | ✅ | Numéro de téléphone (stocké dans le paiement) |
 
 **✅ Réponse de succès (201) :**
 ```json
@@ -111,7 +111,7 @@ Initie un processus de paiement pour un utilisateur.
 |-----------|------|--------|-------------|
 | `email` | string | ✅ | Email de l'utilisateur |
 | `fullName` | string | ✅ | Nom complet |
-| `phone` | string | ✅ | Numéro de téléphone |
+| `phone` | string | ✅ | Numéro de téléphone (stocké dans le paiement) |
 | `paymentMethod` | string | ✅ | `card` ou `mobile` |
 
 **✅ Réponse de succès (200) :**
@@ -237,6 +237,7 @@ Vérifier le statut d'un paiement FlexPay auprès du service de paiement.
 - **`message`** : Message détaillé de FlexPay
 
 **💡 Notes importantes :**
+- **Stockage du numéro :** Le numéro de téléphone est maintenant stocké directement dans l'entité Payment pour les paiements mobiles
 - **Génération d'access code :** Quand un paiement passe au statut "success", un code d'accès unique est automatiquement généré pour l'utilisateur (valable 24h)
 - **Code existant :** Si l'utilisateur a déjà un code d'accès valide, celui-ci est réutilisé au lieu d'en générer un nouveau
 - **Mise à jour automatique du statut :** Le statut du paiement est automatiquement mis à jour en base de données selon le résultat FlexPay (success, failed, ou reste pending si en attente)
