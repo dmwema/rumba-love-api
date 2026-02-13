@@ -65,7 +65,7 @@ La documentation est organisée par tags :
 - `GET /api/access_codes` - Liste codes d'accès
 
 #### 🎬 Accès Stream Public
-- `GET /api/live/watch` - Accès stream via variable d'environnement `STREAM_URL`
+- `POST /api/live/watch` - Accès stream avec validation du code d'accès
 - Configuration sans base de données, directement via `.env.local`
 
 ### 🎯 Configuration du Stream
@@ -193,12 +193,14 @@ Valide un code d'accès et génère un token live temporaire.
 
 ### 📺 Accès Live
 
-#### GET `/api/live/watch`
-Accède au stream (nécessite le token live).
+#### POST `/api/live/watch`
+Accède au stream avec validation du code d'accès.
 
-**Headers :**
-```
-Authorization: Bearer {live_access_token}
+**Corps de la requête :**
+```json
+{
+  "code": "CINE-9C52QW4"
+}
 ```
 
 **Réponse :**
@@ -302,7 +304,7 @@ symfony serve
 1. **Initier un paiement** : POST `/api/payments/initiate`
 2. **Confirmer le paiement** : POST `/api/payments/confirm`
 3. **Valider le code** : POST `/api/code/validate`
-4. **Accéder au live** : GET `/api/live/watch` (avec token)
+4. **Accéder au live** : POST `/api/live/watch` (avec code d'accès)
 
 ### Administration
 1. **Login utilisateur** : POST `/api/login`

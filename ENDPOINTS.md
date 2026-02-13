@@ -534,9 +534,16 @@ Tous les endpoints sont automatiquement documentés avec :
 
 ## 🔒 ENDPOINTS DE SÉCURITÉ RENFORCÉE
 
-### GET `/api/live/watch`
+### POST `/api/live/watch`
 
-Accès public direct au stream live via variable d'environnement.
+Accéder au stream en direct avec validation du code d'accès.
+
+**📝 Corps de la requête :**
+```json
+{
+  "code": "CINE-9C52QW4"
+}
+```
 
 **✅ Réponse de succès (200) :**
 ```json
@@ -544,7 +551,12 @@ Accès public direct au stream live via variable d'environnement.
   "streamUrl": "https://configured-stream-url.com/live",
   "title": "Concert Live Streaming",
   "isLive": true,
-  "message": "Stream access granted"
+  "message": "Stream access granted",
+  "user": {
+    "id": 1,
+    "fullName": "John Doe",
+    "email": "john@example.com"
+  }
 }
 ```
 

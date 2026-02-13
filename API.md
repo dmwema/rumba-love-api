@@ -363,9 +363,23 @@ Authorization: Bearer {admin_token}
 
 ## 🎬 ACCÈS AU STREAM LIVE
 
-### GET `/live/watch`
+### POST `/api/live/watch`
 
-Accès public au stream live (pas d'authentification requise).
+Accéder au stream en direct avec validation du code d'accès.
+
+**🔓 Authentification :** Non requise (utilise le code d'accès)
+
+**📝 Corps de la requête :**
+```json
+{
+  "code": "CINE-9C52QW4"
+}
+```
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `code` | string | ✅ | Code d'accès valide généré lors du paiement |
 
 **✅ Réponse de succès (200) :**
 ```json
@@ -373,17 +387,24 @@ Accès public au stream live (pas d'authentification requise).
   "streamUrl": "https://configured-stream-url.com/live",
   "title": "Concert Live Streaming",
   "isLive": true,
-  "message": "Stream access granted"
+  "message": "Stream access granted",
+  "user": {
+    "id": 1,
+    "fullName": "John Doe",
+    "email": "john@example.com"
+  }
 }
 ```
 
 **📋 Configuration :**
 - L'URL du stream est configurée via la variable d'environnement `STREAM_URL`
-- Pas d'accès base de données requis
-- Validation automatique de l'URL au démarrage
+- Validation du code d'accès en base de données
+- Marquage automatique du code comme utilisé
+- Mise à jour du statut en ligne de l'utilisateur
 
 **❌ Réponses d'erreur :**
-- **401** : Token manquant ou invalide
+- **400** : Code manquant, invalide ou expiré
+- **500** : URL du stream non configurée
 - **500** : URL du stream non configurée
 
 ---
