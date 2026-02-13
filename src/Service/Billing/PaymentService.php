@@ -18,7 +18,7 @@ class PaymentService
 
     private $mobileBaseUrlFlexPay = 'https://backend.flexpay.cd/api/rest/v1/';
     private $cardBaseUrlFlexPay = 'https://cardpayment.flexpay.cd/v1.1/pay';
-    private $token = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJcL2xvZ2luIiwicm9sZXMiOlsiTUVSQ0hBTlQiXSwiZXhwIjoxODM0MDMyMjYwLCJzdWIiOiI1NTlmMDFjMzk5NjcxNzVhNWVhMTk2YzI3YTdlZTFjNSJ9.tQKTGxec0rc_BqYMk36UsyzSI6Q4k8QUR3PAwNx4WLk';
+    private $token = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJcL2xvZ2luIiwicm9sZXMiOlsiTUVSQ0hBTlQiXSwiZXhwIjoxODM0MDU3NDczLCJzdWIiOiJlNmFhNjVlY2JkMmE0NWMxNDI3OTI0MGUyMWY3NTVhNyJ9.rst3-E8HFzNeMIeNHg0YmviGCdZ1r911HTlEBguY-Go';
 
     /**
      * @throws \JsonException
@@ -26,7 +26,7 @@ class PaymentService
     public function mobilePayment($operation): array
     {
         $data = [
-            "merchant"      => "KUUWAA",
+            "merchant"      => "CINEFILM",
             "type"          => "1",
             "phone"         => $operation->getPhoneNumber(),
             "reference"     => $operation->getReference(),
@@ -72,14 +72,14 @@ class PaymentService
     public function cardPayment($operation): array
     {
         $data = [
-            "merchant"      => "KUUWAA",
+            "merchant"      => "CINEFILM",
             "reference"     => $operation->getReference(),
             "amount"        => $operation->getAmount(),
             "currency"      => "USD",
-            "callback_url"   => "https://kuuwaa.com/callback",
-            "approve_url"   => "https://kuuwaa.com/approve",
-            "cancel_url"   => "https://kuuwaa.com/cancel",
-            "decline_url"   => "https://kuuwaa.com/decline",
+            "callback_url"   => "https://sacast.app/callback",
+            "approve_url"   => "https://sacast.app/approve",
+            "cancel_url"   => "https://sacast.app/cancel",
+            "decline_url"   => "https://sacast.app/decline",
             "authorization" => $this->token,
             "description"   => $operation->getReference(),
         ];

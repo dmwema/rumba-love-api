@@ -344,9 +344,9 @@ class AdminController extends AbstractController
             $event->setDescription($data['description'] ?? 'Test description');
             $event->setPrice($data['price'] ?? 10.00);
             $event->setStreamUrl($this->encryptionService->encrypt($data['streamUrl'] ?? 'https://test.com'));
-            $event->setLiveDate(new \DateTimeImmutable($data['liveDate'] ?? 'now +1 day'));
+            $event->setLiveDate(new \DateTime($data['liveDate'] ?? 'now +1 day'));
             $event->setIsActive(true);
-            $event->setCreatedAt(new \DateTimeImmutable());
+            $event->setCreatedAt(new \DateTime());
 
             $this->entityManager->persist($event);
             $this->entityManager->flush();

@@ -323,11 +323,132 @@ Vérifier le statut d'un paiement FlexPay auprès du service de paiement.
 - **Code existant :** Si l'utilisateur a déjà un code d'accès valide, celui-ci est réutilisé au lieu d'en générer un nouveau
 - **Mise à jour automatique du statut :** Le statut du paiement est automatiquement mis à jour en base de données selon le résultat FlexPay
 - **Numéro de test :** Le numéro `243999999999` est traité comme un paiement de test et passe automatiquement au statut "success"
+- **Session persistante :** Après validation du code, un token de session est généré pour éviter de redemander le code lors des prochaines connexions
 
 **❌ Réponses d'erreur :**
 - **400** : paymentId manquant ou paiement sans référence de transaction
 - **404** : Paiement non trouvé
 - **500** : Erreur lors de la vérification
+
+### POST `/api/card-payments/initiate`
+
+Initie un paiement par carte bancaire auprès de FlexPay.
+
+**🔓 Authentification :** Non requise
+
+**📝 Corps de la requête :**
+```json
+{
+  "email": "user@example.com",
+  "fullName": "John Doe"
+}
+```
+
+**ℹ️ Note :** Contrairement aux paiements mobiles, les informations de carte bancaire ne sont pas collectées côté API. L'utilisateur est redirigé vers FlexPay pour saisir ses informations de paiement en toute sécurité.
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `email` | string | ✅ | Email de l'utilisateur |
+| `fullName` | string | ✅ | Nom complet de l'utilisateur |
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "processing",
+  "amount": "5.00",
+  "paymentMethod": "card",
+  "orderNumber": "CARD-123456789-1234567890",
+  "redirectUrl": "https://cardpayment.flexpay.cd/pay/CARD-123456789-1234567890",
+  "message": "Card payment initiated. Redirect user to FlexPay."
+}
+```
+
+**📋 Processus de paiement par carte :**
+1. **Initiation** : Collecte des informations de carte et création du paiement
+2. **Redirection** : Utilisateur redirigé vers FlexPay pour paiement sécurisé
+3. **Callback** : FlexPay appelle `/api/card-payments/callback` avec le résultat
+4. **Finalisation** : Génération d'access code si paiement réussi
+
+**❌ Réponses d'erreur :**
+- **400** : Données de carte invalides ou manquantes
+- **500** : Erreur lors de l'initiation du paiement
+
+### POST `/api/card-payments/callback`
+
+Callback automatique appelé par FlexPay après traitement du paiement par carte.
+
+**🔓 Authentification :** Non requise (appelé par FlexPay)
+
+**📝 Paramètres (query ou body) :**
+- `orderNumber` : Numéro de commande FlexPay
+- `status` : Statut du paiement (`success`, `failed`, `cancelled`)
+
+**✅ Réponse :**
+```json
+{
+  "message": "Payment callback processed",
+  "orderNumber": "CARD-123456789-1234567890",
+  "status": "success"
+}
+```
+
+### POST `/card-payments/initiate`
+
+Initie un paiement par carte bancaire avec redirection vers FlexPay.
+
+**🔓 Authentification :** Non requise
+
+**📝 Corps de la requête :**
+```json
+{
+  "email": "user@example.com",
+  "fullName": "John Doe"
+}
+```
+
+**ℹ️ Note :** Contrairement aux paiements mobiles, les informations de carte bancaire ne sont pas collectées côté API. L'utilisateur est redirigé vers FlexPay pour saisir ses informations de paiement en toute sécurité.
+
+**📋 Paramètres :**
+| Paramètre | Type | Requis | Description |
+|-----------|------|--------|-------------|
+| `email` | string | ✅ | Email de l'utilisateur |
+| `fullName` | string | ✅ | Nom complet |
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "processing",
+  "amount": "5.00",
+  "paymentMethod": "card",
+  "orderNumber": "CARD-123-1640995200",
+  "redirectUrl": "https://cardpayment.flexpay.cd/pay/CARD-123-1640995200",
+  "message": "Card payment initiated. Redirect user to FlexPay."
+}
+```
+
+**📋 Flux de paiement par carte :**
+1. **Initiation** : Appel `/card-payments/initiate` avec les détails de carte
+2. **Redirection** : Rediriger l'utilisateur vers l'`redirectUrl` fourni
+3. **Traitement** : FlexPay traite le paiement
+4. **Callback** : FlexPay appelle automatiquement `/card-payments/callback`
+5. **Finalisation** : Système met à jour le statut et génère l'access code
+
+**❌ Réponses d'erreur :**
+- **400** : Données de carte invalides ou manquantes
+- **500** : Erreur lors de l'initiation du paiement
+
+### GET/POST `/card-payments/callback`
+
+Endpoint de callback appelé automatiquement par FlexPay après traitement du paiement.
+
+**🔓 Authentification :** Non requise (appelé par FlexPay)
+
+**📝 Paramètres (query ou POST) :**
+- `orderNumber` : Numéro de commande FlexPay
+- `status` : Statut du paiement (`success`, `failed`, `cancelled`)
 
 ### GET `/payments`
 
@@ -365,21 +486,30 @@ Authorization: Bearer {admin_token}
 
 ### POST `/api/live/watch`
 
-Accéder au stream en direct avec validation du code d'accès.
+Accéder au stream en direct avec validation du code d'accès ou token de session.
 
-**🔓 Authentification :** Non requise (utilise le code d'accès)
+**🔓 Authentification :** Non requise
 
 **📝 Corps de la requête :**
 ```json
+// Première connexion (avec code d'accès)
 {
   "code": "CINE-9C52QW4"
+}
+
+// Connexions suivantes (avec token de session)
+{
+  "sessionToken": "abc123def456ghi789"
 }
 ```
 
 **📋 Paramètres :**
 | Paramètre | Type | Requis | Description |
 |-----------|------|--------|-------------|
-| `code` | string | ✅ | Code d'accès valide généré lors du paiement |
+| `code` | string | ❌* | Code d'accès valide (première utilisation) |
+| `sessionToken` | string | ❌* | Token de session (utilisations suivantes) |
+
+*Un des deux paramètres est requis
 
 **✅ Réponse de succès (200) :**
 ```json
@@ -388,6 +518,7 @@ Accéder au stream en direct avec validation du code d'accès.
   "title": "Concert Live Streaming",
   "isLive": true,
   "message": "Stream access granted",
+  "sessionToken": "abc123def456ghi789",
   "user": {
     "id": 1,
     "fullName": "John Doe",

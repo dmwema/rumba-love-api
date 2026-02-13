@@ -4,6 +4,7 @@ namespace App\Controller\Api;
 
 use App\Entity\AccessCode;
 use App\Entity\LiveEvent;
+use App\Service\LiveSessionService;
 use App\Service\StreamUrlEncryptionService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,18 +21,27 @@ class LiveController extends AbstractController
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private LiveSessionService $liveSessionService,
         private StreamUrlEncryptionService $encryptionService
     ) {}
 
     /**
-     * Accéder au stream en direct avec validation du code d'accès
+     * Accéder au stream en direct avec validation du code d'accès ou token de session
      *
      * @OA\RequestBody(
      *     required=true,
      *     @OA\JsonContent(
      *         type="object",
-     *         required={"code"},
-     *         @OA\Property(property="code", type="string", example="CINE-9C52QW4", description="Code d'accès valide")
+     *         oneOf={
+     *             @OA\Schema(
+     *                 required={"code"},
+     *                 @OA\Property(property="code", type="string", example="CINE-9C52QW4", description="Code d'accès valide (première utilisation)")
+     *             ),
+     *             @OA\Schema(
+     *                 required={"sessionToken"},
+     *                 @OA\Property(property="sessionToken", type="string", example="abc123def456", description="Token de session (utilisations suivantes)")
+     *             )
+     *         }
      *     )
      * )
      * @OA\Response(
@@ -42,15 +52,16 @@ class LiveController extends AbstractController
      *         @OA\Property(property="streamUrl", type="string", example="https://configured-stream-url.com/live"),
      *         @OA\Property(property="title", type="string", example="Concert Live Streaming"),
      *         @OA\Property(property="isLive", type="boolean", example=true),
-     *         @OA\Property(property="message", type="string", example="Stream access granted")
+     *         @OA\Property(property="message", type="string", example="Stream access granted"),
+     *         @OA\Property(property="sessionToken", type="string", example="abc123def456", description="Token de session pour les prochaines connexions")
      *     )
      * )
      * @OA\Response(
      *     response=400,
-     *     description="Code d'accès invalide ou manquant",
+     *     description="Code d'accès ou token invalide",
      *     @OA\JsonContent(
      *         type="object",
-     *         @OA\Property(property="error", type="string", example="Invalid or expired access code")
+     *         @OA\Property(property="error", type="string", example="Invalid access code or session token")
      *     )
      * )
      * @OA\Response(
@@ -65,29 +76,58 @@ class LiveController extends AbstractController
     #[Route('/watch', name: 'api_live_watch', methods: ['POST'])]
     public function watch(Request $request): JsonResponse
     {
-        // Récupérer et valider le code d'accès
+        // Récupérer les données de la requête
         $data = json_decode($request->getContent(), true);
 
-        if (!$data || !isset($data['code']) || empty($data['code'])) {
-            return $this->json(['error' => 'Access code is required'], 400);
+        if (!$data) {
+            return $this->json(['error' => 'Request body is required'], 400);
         }
 
-        $code = trim($data['code']);
+        $user = null;
+        $sessionToken = null;
 
-        // Valider le code d'accès
-        $accessCode = $this->entityManager->getRepository(AccessCode::class)->findOneBy(['code' => $code]);
+        // Vérifier si un token de session est fourni
+        if (isset($data['sessionToken']) && !empty($data['sessionToken'])) {
+            $sessionTokenValue = trim($data['sessionToken']);
 
-        if (!$accessCode) {
-            return $this->json(['error' => 'Invalid access code'], 400);
+            // Valider le token de session
+            $user = $this->liveSessionService->validateSessionToken($sessionTokenValue);
+
+            if (!$user) {
+                return $this->json(['error' => 'Invalid or expired session token'], 400);
+            }
+
+            // Générer un nouveau token de session pour prolonger la session
+            $sessionToken = $this->liveSessionService->generateSessionToken($user);
+
+        } elseif (isset($data['code']) && !empty($data['code'])) {
+            // Validation par code d'accès (première utilisation)
+            $code = trim($data['code']);
+
+            // Valider le code d'accès
+            $accessCode = $this->entityManager->getRepository(AccessCode::class)->findOneBy(['code' => $code]);
+
+            if (!$accessCode) {
+                return $this->json(['error' => 'Invalid access code'], 400);
+            }
+
+            if (!$accessCode->isValid()) {
+                return $this->json(['error' => 'Access code has expired or already used'], 400);
+            }
+
+            // Marquer le code comme utilisé et mettre à jour l'utilisateur
+            $accessCode->markAsUsed();
+            $user = $accessCode->getUser();
+
+            // Générer un token de session pour les futures connexions
+            $sessionToken = $this->liveSessionService->generateSessionToken($user);
+
+            $this->entityManager->flush();
+        } else {
+            return $this->json(['error' => 'Access code or session token is required'], 400);
         }
 
-        if (!$accessCode->isValid()) {
-            return $this->json(['error' => 'Access code has expired or already used'], 400);
-        }
-
-        // Marquer le code comme utilisé et mettre à jour l'utilisateur
-        $accessCode->markAsUsed();
-        $user = $accessCode->getUser();
+        // Mettre à jour le statut en ligne de l'utilisateur
         $user->setIsOnline(true);
         $user->setLastActivity(new \DateTime());
         $this->entityManager->flush();
@@ -112,6 +152,7 @@ class LiveController extends AbstractController
             'title' => 'Concert Live Streaming',
             'isLive' => $isLive,
             'message' => 'Stream access granted',
+            'sessionToken' => $sessionToken,
             'user' => [
                 'id' => $user->getId(),
                 'fullName' => $user->getFullName(),

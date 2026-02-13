@@ -231,6 +231,100 @@ Vérifier le statut d'un paiement FlexPay auprès du service de paiement.
 - **404** : Paiement non trouvé
 - **500** : Erreur lors de la vérification
 
+### POST `/api/card-payments/initiate`
+
+Initie un paiement par carte bancaire avec redirection vers FlexPay.
+
+**📝 Corps de la requête :**
+```json
+{
+  "email": "user@example.com",
+  "fullName": "John Doe"
+}
+```
+
+**ℹ️ Note :** Contrairement aux paiements mobiles, les informations de carte bancaire ne sont pas collectées côté API. L'utilisateur est redirigé vers FlexPay pour saisir ses informations de paiement en toute sécurité.
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "processing",
+  "amount": "5.00",
+  "paymentMethod": "card",
+  "orderNumber": "CARD-123456789-1234567890",
+  "redirectUrl": "https://cardpayment.flexpay.cd/pay/...",
+  "message": "Card payment initiated successfully"
+}
+```
+
+### POST `/api/card-payments/callback`
+
+Traitement automatique des callbacks FlexPay pour paiements par carte.
+
+**📝 Paramètres :**
+- `orderNumber` : Référence de commande FlexPay
+- `status` : Résultat du paiement
+
+**✅ Réponse :**
+```json
+{
+  "message": "Payment callback processed",
+  "orderNumber": "CARD-123456789-1234567890",
+  "status": "success"
+}
+```
+
+### POST `/api/card-payments/initiate`
+
+Initier un paiement par carte bancaire avec redirection vers FlexPay.
+
+**📝 Corps de la requête :**
+```json
+{
+  "email": "user@example.com",
+  "fullName": "John Doe",
+  "cardNumber": "4111111111111111",
+  "expiryMonth": "12",
+  "expiryYear": "2025",
+  "cvv": "123"
+}
+```
+
+**✅ Réponse de succès (200) :**
+```json
+{
+  "paymentId": 123,
+  "status": "processing",
+  "amount": "5.00",
+  "paymentMethod": "card",
+  "orderNumber": "CARD-123-1640995200",
+  "redirectUrl": "https://cardpayment.flexpay.cd/pay/CARD-123-1640995200",
+  "message": "Card payment initiated. Redirect user to FlexPay."
+}
+```
+
+**📋 Validation des données de carte :**
+- **Numéro de carte** : 13-19 chiffres
+- **CVV** : 3-4 chiffres
+- **Date d'expiration** : Format MM/YYYY
+
+**❌ Réponses d'erreur :**
+- **400** : Données de carte invalides
+- **500** : Erreur d'initiation
+
+### GET/POST `/api/card-payments/callback`
+
+Callback automatique pour les paiements par carte (appelé par FlexPay).
+
+**📝 Paramètres :**
+- `orderNumber` : Numéro de commande FlexPay
+- `status` : Statut (`success`, `failed`, `cancelled`)
+
+**✅ Actions automatiques :**
+- **Success** : Génère access code + met à jour statut
+- **Failed/Cancelled** : Met à jour statut à "failed"
+
 **🔍 flexpayStatus :**
 - **`success`** : true/false/null (null si vérification impossible)
 - **`waiting`** : true si paiement en attente, false sinon
@@ -242,6 +336,7 @@ Vérifier le statut d'un paiement FlexPay auprès du service de paiement.
 - **Code existant :** Si l'utilisateur a déjà un code d'accès valide, celui-ci est réutilisé au lieu d'en générer un nouveau
 - **Mise à jour automatique du statut :** Le statut du paiement est automatiquement mis à jour en base de données selon le résultat FlexPay (success, failed, ou reste pending si en attente)
 - **Numéro de test :** Le numéro `243999999999` est traité comme un paiement de test et passe automatiquement au statut "success" avec génération d'access code
+- **Session persistante :** Après validation du code, un token de session est généré pour éviter de redemander le code lors des prochaines connexions (valable 1h)
 - **FlexPay indisponible :** Si FlexPay est indisponible, la route retourne le statut actuel du paiement depuis la base de données avec un message d'avertissement
 
 ### GET `/api/payments`
@@ -536,12 +631,19 @@ Tous les endpoints sont automatiquement documentés avec :
 
 ### POST `/api/live/watch`
 
-Accéder au stream en direct avec validation du code d'accès.
+Accéder au stream en direct avec validation du code d'accès ou token de session.
 
 **📝 Corps de la requête :**
 ```json
 {
   "code": "CINE-9C52QW4"
+}
+```
+
+**📝 Corps de la requête (sessions) :**
+```json
+{
+  "sessionToken": "abc123def456ghi789"
 }
 ```
 
@@ -552,6 +654,7 @@ Accéder au stream en direct avec validation du code d'accès.
   "title": "Concert Live Streaming",
   "isLive": true,
   "message": "Stream access granted",
+  "sessionToken": "abc123def456ghi789",
   "user": {
     "id": 1,
     "fullName": "John Doe",
