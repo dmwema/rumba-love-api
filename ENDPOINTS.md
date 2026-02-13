@@ -141,7 +141,7 @@ Initie un processus de paiement pour un utilisateur.
 }
 ```
 
-**🗄️ Persistance :** Utilisateur et paiement sont automatiquement sauvegardés en base de données SQLite.
+**🗄️ Persistance :** Utilisateur et paiement sont automatiquement sauvegardés en base de données SQLite avec Doctrine ORM.
 
 **❌ Réponses d'erreur :**
 - **400** : Données invalides

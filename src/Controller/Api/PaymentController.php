@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Service\PaymentService;
 use App\Service\Billing\PaymentService as FlexPayService;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,7 +26,8 @@ class PaymentController extends AbstractController
         private EntityManagerInterface $entityManager,
         private PaymentService $paymentService,
         private FlexPayService $flexPayService,
-        private ValidatorInterface $validator
+        private ValidatorInterface $validator,
+        private LoggerInterface $logger
     ) {}
 
     /**
@@ -68,11 +70,7 @@ class PaymentController extends AbstractController
     #[Route('/initiate', name: 'api_payment_initiate', methods: ['POST'])]
     public function initiate(Request $request): JsonResponse
     {
-        // Log pour debug
-        error_log('PaymentController::initiate called');
-
         $data = json_decode($request->getContent(), true);
-        error_log('Request data: ' . json_encode($data));
 
         // Validation des paramètres requis
         if (!$data ||
@@ -98,104 +96,130 @@ class PaymentController extends AbstractController
         }
 
         try {
-            // Utiliser PDO directement pour la persistance (plus fiable que Doctrine pour ce cas)
-            $dbPath = dirname(__DIR__, 3) . '/var/data.db';
-            $pdo = new \PDO('sqlite:' . $dbPath);
-            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            // Utiliser Doctrine EntityManager de manière professionnelle
+            $this->logger->info('Starting payment initiation', [
+                'email' => $email,
+                'paymentMethod' => $paymentMethod
+            ]);
 
-            // 1. Enregistrer l'utilisateur (avec déduplication par email)
-            $stmt = $pdo->prepare("INSERT OR IGNORE INTO users (email, full_name, phone, created_at) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$email, $fullName, $phone, date('Y-m-d H:i:s')]);
-            $userId = $pdo->lastInsertId();
+            $this->entityManager->beginTransaction();
 
-            // Si l'utilisateur existait déjà, récupérer son ID
-            if ($userId == 0) {
-                $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-                $stmt->execute([$email]);
-                $userId = $stmt->fetchColumn();
-            }
+            try {
+                // 1. Rechercher ou créer l'utilisateur
+                $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
 
-            // 2. Créer le paiement
-            $stmt = $pdo->prepare("INSERT INTO payments (user_id, amount, status, payment_method, created_at) VALUES (?, ?, ?, ?, ?)");
-            $stmt->execute([$userId, '10.00', 'pending', $paymentMethod, date('Y-m-d H:i:s')]);
-            $paymentId = $pdo->lastInsertId();
+                if (!$user) {
+                    $user = new User();
+                    $user->setEmail($email);
+                    $user->setFullName($fullName);
+                    $user->setPhone($phone);
+                    $user->setCreatedAt(new \DateTime());
+                    $user->setIsOnline(false);
+                    $user->setLastActivity(null);
 
-            // 3. Générer une référence unique pour FlexPay
-            $reference = 'PAY-' . $paymentId . '-' . time();
-
-            // 4. Créer l'objet operation pour FlexPay
-            $operation = new class($phone, $reference, '10.00') {
-                private $phoneNumber;
-                private $reference;
-                private $amount;
-
-                public function __construct($phone, $reference, $amount) {
-                    $this->phoneNumber = $phone;
-                    $this->reference = $reference;
-                    $this->amount = $amount;
+                    $this->entityManager->persist($user);
                 }
 
-                public function getPhoneNumber() { return $this->phoneNumber; }
-                public function getReference() { return $this->reference; }
-                public function getAmount() { return $this->amount; }
-                public function getOrderNumber() { return $this->reference; }
-            };
+                // 2. Créer le paiement
+                $payment = new Payment();
+                $payment->setUser($user);
+                $payment->setAmount('10.00');
+                $payment->setPaymentMethod($paymentMethod);
+                $payment->setStatus('pending');
+                $payment->setCreatedAt(new \DateTime());
 
-            // 5. Lancer le paiement FlexPay
-            $flexpayResult = null;
-            if ($paymentMethod === 'mobile') {
-                $flexpayResult = $this->flexPayService->mobilePayment($operation);
-            } elseif ($paymentMethod === 'card') {
-                $flexpayResult = $this->flexPayService->cardPayment($operation);
+                $this->entityManager->persist($payment);
+                $this->entityManager->flush(); // Sauvegarde pour obtenir l'ID
+
+                // 3. Générer une référence unique pour FlexPay
+                $reference = 'PAY-' . $payment->getId() . '-' . time();
+
+                // 4. Créer l'objet operation pour FlexPay
+                $operation = new class($phone, $reference, '10.00') {
+                    private $phoneNumber;
+                    private $reference;
+                    private $amount;
+
+                    public function __construct($phone, $reference, $amount) {
+                        $this->phoneNumber = $phone;
+                        $this->reference = $reference;
+                        $this->amount = $amount;
+                    }
+
+                    public function getPhoneNumber() { return $this->phoneNumber; }
+                    public function getReference() { return $this->reference; }
+                    public function getAmount() { return $this->amount; }
+                    public function getOrderNumber() { return $this->reference; }
+                };
+
+                // 5. Lancer le paiement FlexPay
+                $flexpayResult = null;
+                if ($paymentMethod === 'mobile') {
+                    $flexpayResult = $this->flexPayService->mobilePayment($operation);
+                } elseif ($paymentMethod === 'card') {
+                    $flexpayResult = $this->flexPayService->cardPayment($operation);
+                }
+
+                // 6. Mettre à jour le paiement selon le résultat FlexPay
+                if (!$flexpayResult || !$flexpayResult['success']) {
+                    $payment->setStatus('failed');
+                    $this->entityManager->flush();
+
+                    // Rollback de la transaction en cas d'échec
+                    $this->entityManager->rollback();
+
+                    return $this->json([
+                        'error' => 'Payment initiation failed',
+                        'message' => $flexpayResult['message'] ?? 'Unknown error',
+                        'paymentId' => $payment->getId()
+                    ], 400);
+                }
+
+                // Paiement FlexPay réussi - mettre à jour avec les infos
+                $payment->setTransactionReference($flexpayResult['orderNumber'] ?? $reference);
+                $payment->setStatus('processing');
+                $this->entityManager->flush();
+
+                // Commit de la transaction
+                $this->entityManager->commit();
+
+                // 7. Retourner les informations de paiement
+                $response = [
+                    'paymentId' => $payment->getId(),
+                    'status' => $payment->getStatus(),
+                    'amount' => $payment->getAmount(),
+                    'paymentMethod' => $payment->getPaymentMethod(),
+                    'orderNumber' => $payment->getTransactionReference(),
+                    'userId' => $user->getId(),
+                    'message' => 'Payment initiated with FlexPay - Data persisted using Doctrine ORM'
+                ];
+
+                // Ajouter redirectUrl pour les paiements par carte
+                if ($paymentMethod === 'card' && isset($flexpayResult['redirectUrl'])) {
+                    $response['redirectUrl'] = $flexpayResult['redirectUrl'];
+                }
+
+                return $this->json($response, 200);
+
+            } catch (\Exception $innerException) {
+                // En cas d'erreur interne, rollback de la transaction
+                $this->entityManager->rollback();
+                throw $innerException;
             }
-
-            // 6. Mettre à jour le statut selon le résultat FlexPay
-            $finalStatus = 'pending';
-            if (!$flexpayResult || !$flexpayResult['success']) {
-                $finalStatus = 'failed';
-                $stmt = $pdo->prepare("UPDATE payments SET status = 'failed' WHERE id = ?");
-                $stmt->execute([$paymentId]);
-
-                return $this->json([
-                    'error' => 'Payment initiation failed',
-                    'message' => $flexpayResult['message'] ?? 'Unknown error',
-                    'paymentId' => $paymentId
-                ], 400);
-            }
-
-            // Paiement FlexPay réussi - mettre à jour avec les infos
-            $orderNumber = $flexpayResult['orderNumber'] ?? $reference;
-            $stmt = $pdo->prepare("UPDATE payments SET transaction_reference = ?, status = 'processing' WHERE id = ?");
-            $stmt->execute([$orderNumber, $paymentId]);
-
-            // 7. Retourner les informations de paiement
-            $response = [
-                'paymentId' => $paymentId,
-                'status' => 'processing',
-                'amount' => '10.00',
-                'paymentMethod' => $paymentMethod,
-                'orderNumber' => $orderNumber,
-                'userId' => $userId,
-                'message' => 'Payment initiated with FlexPay - Data persisted'
-            ];
-
-            // Ajouter redirectUrl pour les paiements par carte
-            if ($paymentMethod === 'card' && isset($flexpayResult['redirectUrl'])) {
-                $response['redirectUrl'] = $flexpayResult['redirectUrl'];
-            }
-
-            return $this->json($response, 200);
 
         } catch (\Exception $e) {
-            error_log('Doctrine error in payment initiation: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
-
-            // En cas d'erreur Doctrine, retourner une réponse d'erreur détaillée
-            return $this->json([
-                'error' => 'Database error',
-                'message' => 'Failed to process payment due to database issues',
-                'details' => $e->getMessage(),
+            // Log l'erreur de manière professionnelle
+            $this->logger->error('Payment initiation failed', [
+                'error' => $e->getMessage(),
+                'email' => $email ?? 'unknown',
+                'paymentMethod' => $paymentMethod ?? 'unknown',
                 'trace' => $e->getTraceAsString()
+            ]);
+
+            return $this->json([
+                'error' => 'Internal server error',
+                'message' => 'Payment processing failed due to a technical issue',
+                'reference' => 'ERR-' . time()
             ], 500);
         }
     }
