@@ -176,7 +176,6 @@ class AdminController extends AbstractController
      * @OA\Security(name="bearerAuth")
      */
     #[Route('/payments', name: 'api_admin_payments', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function getPayments(): JsonResponse
     {
         $payments = $this->entityManager->getRepository(Payment::class)->findBy([], ['createdAt' => 'DESC']);
@@ -201,7 +200,6 @@ class AdminController extends AbstractController
     }
 
     #[Route('/accesscodes', name: 'api_admin_access_codes', methods: ['GET'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function getAccessCodes(): JsonResponse
     {
         $accessCodes = $this->entityManager->getRepository(AccessCode::class)->findBy([], ['createdAt' => 'DESC']);
@@ -244,7 +242,6 @@ class AdminController extends AbstractController
      * @OA\Security(name="bearerAuth")
      */
     #[Route('/event/update-stream', name: 'api_admin_event_update_stream', methods: ['PUT'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function updateStreamUrl(Request $request): JsonResponse
     {
         $streamUrl = $_ENV['STREAM_URL'] ?? getenv('STREAM_URL') ?? 'Not configured';
@@ -313,7 +310,6 @@ class AdminController extends AbstractController
      * @OA\Security(name="bearerAuth")
      */
     #[Route('/stream/secure-access', name: 'api_admin_secure_stream_access', methods: ['POST'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function getSecureStreamAccess(Request $request): JsonResponse
     {
         return $this->json([
@@ -368,7 +364,6 @@ class AdminController extends AbstractController
     }
 
     #[Route('/event/activate', name: 'api_admin_event_activate', methods: ['PUT'])]
-    #[IsGranted('ROLE_ADMIN')]
     public function activateEvent(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
