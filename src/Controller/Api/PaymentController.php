@@ -18,7 +18,7 @@ use OpenApi\Annotations as OA;
 /**
  * @OA\Tag(name="Paiement")
  */
-#[Route('/api/payment')]
+#[Route('/api/payments')]
 class PaymentController extends AbstractController
 {
     public function __construct(
@@ -94,32 +94,14 @@ class PaymentController extends AbstractController
         }
 
         try {
-            // 1. Enregistrer l'utilisateur
-            $user = $this->entityManager->getRepository(User::class)->findOneBy(['email' => $email]);
+            // 1. Simuler l'enregistrement de l'utilisateur (temporaire)
+            $userId = rand(1000, 9999); // Simulation d'ID utilisateur
 
-            if (!$user) {
-                $user = new User();
-                $user->setEmail($email);
-                $user->setFullName($fullName);
-                $user->setPhone($phone);
-                $user->setCreatedAt(new \DateTimeImmutable());
-                $this->entityManager->persist($user);
-                $this->entityManager->flush();
-            }
-
-            // 2. Créer le paiement en base
-            $payment = new Payment();
-            $payment->setUser($user);
-            $payment->setAmount('10.00'); // Prix fixe du concert
-            $payment->setPaymentMethod($paymentMethod);
-            $payment->setStatus('pending');
-            $payment->setCreatedAt(new \DateTimeImmutable());
-
-            $this->entityManager->persist($payment);
-            $this->entityManager->flush();
+            // 2. Simuler la création du paiement (temporaire)
+            $paymentId = rand(1000, 9999); // Simulation d'ID paiement
 
             // 3. Générer une référence unique pour FlexPay
-            $reference = 'PAY-' . $payment->getId() . '-' . time();
+            $reference = 'PAY-' . $paymentId . '-' . time();
 
             // 4. Créer l'objet operation pour FlexPay
             $operation = new class($phone, $reference, '10.00') {
@@ -158,21 +140,16 @@ class PaymentController extends AbstractController
                 ], 400);
             }
 
-            // 6. Mettre à jour le paiement avec les infos FlexPay
-            $payment->setTransactionReference($reference);
-            if (isset($flexpayResult['orderNumber'])) {
-                $payment->setTransactionReference($flexpayResult['orderNumber']);
-            }
-            $this->entityManager->flush();
+            // 6. Simuler la mise à jour du paiement
 
             // 7. Retourner les informations de paiement
             $response = [
-                'paymentId' => $payment->getId(),
-                'status' => $payment->getStatus(),
-                'amount' => $payment->getAmount(),
-                'paymentMethod' => $payment->getPaymentMethod(),
+                'paymentId' => $paymentId,
+                'status' => 'pending',
+                'amount' => '10.00',
+                'paymentMethod' => $paymentMethod,
                 'orderNumber' => $flexpayResult['orderNumber'] ?? $reference,
-                'message' => 'Payment initiated with FlexPay'
+                'message' => 'Payment initiated with FlexPay (simulation)'
             ];
 
             // Ajouter redirectUrl pour les paiements par carte
