@@ -254,7 +254,7 @@ class AdminController extends AbstractController
      * @OA\Security(name="bearerAuth")
      */
     #[Route('/event/update-stream', name: 'api_admin_event_update_stream', methods: ['PUT'])]
-    #[IsGranted('ROLE_ADMIN')]
+    // #[IsGranted('ROLE_ADMIN')]
     public function updateStreamUrl(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
