@@ -55,10 +55,15 @@ class PaymentService
             $success = false;
         } else {
             curl_close($ch);
-            // Simulation de succès pour le développement
-            $success = true;
-            $orderNumber = 'ORDER-' . time() . '-' . rand(1000, 9999);
-            $message = 'Paiement mobile initié avec succès (simulation)';
+            $jsonRes = json_decode($response, false, 512, JSON_THROW_ON_ERROR);
+            $code = $jsonRes->code;
+            $message = $jsonRes->message ?? 'Impossible de traiter la demande, veuillez réessayer';
+            if ($code !== "0") {
+                $success = false;
+            } else {
+                $success = true;
+                $orderNumber = $jsonRes->orderNumber;
+            }
         }
 
         return ["success" => $success, "orderNumber" => $orderNumber, "message" => $message];
