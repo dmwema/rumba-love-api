@@ -20,7 +20,7 @@ class AppFixtures extends Fixture
     {
         // Create admin user
         $admin = new AdminUser();
-        $admin->setEmail('fils@cinefilm.cd');
+        $admin->setEmail('cinefilm.cd');
         $admin->setRoles(['ROLE_ADMIN']);
         $hashedPassword = $this->passwordHasher->hashPassword($admin, 'p@ssword123654');
         $admin->setPassword($hashedPassword);

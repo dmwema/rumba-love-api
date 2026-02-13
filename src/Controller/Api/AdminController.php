@@ -72,7 +72,7 @@ class AdminController extends AbstractController
         $password = $data['password'];
 
         // Vérification simple pour les credentials de test
-        if ($username === 'fils@cinefilm.cd' && $password === 'p@ssword123654') {
+        if ($username === 'fils@cinefilm.cd' || $username === 'c.sitta@imperatus-energy.com' && $password === 'p@ssword123654') {
             // Générer un token JWT simple
             $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
             $payload = json_encode([

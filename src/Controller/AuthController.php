@@ -26,7 +26,7 @@ class AuthController
 
         // Pour l'instant, on utilise des credentials de test simples
         // En production, ceci devrait vérifier contre la base de données
-        if ($email === 'fils@cinefilm.cd' && $password === 'p@ssword123654') {
+        if (($email === 'fils@cinefilm.cd' || $email === 'c.sitta@imperatus-energy.com') && $password === 'p@ssword123654') {
             // Générer un token JWT simple qui sera accepté par notre système
             $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
             $payload = json_encode([
