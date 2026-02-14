@@ -19,7 +19,7 @@ Enregistre un nouvel utilisateur ou retourne l'utilisateur existant s'il est dé
 {
   "fullName": "John Doe",
   "email": "john@example.com",
-  "phone": "243999999999+"
+  "phone": "243888888888"
 }
 ```
 
@@ -36,7 +36,7 @@ Enregistre un nouvel utilisateur ou retourne l'utilisateur existant s'il est dé
   "id": 1,
   "fullName": "John Doe",
   "email": "john@example.com",
-  "phone": "243999999999+",
+  "phone": "243888888888",
   "isOnline": false,
   "lastActivity": null,
   "createdAt": "2026-02-13T10:30:00+00:00"
@@ -60,7 +60,7 @@ Liste tous les utilisateurs enregistrés avec leur statut en ligne/hors ligne.
     "id": 1,
     "fullName": "John Doe",
     "email": "john@example.com",
-    "phone": "243999999999+",
+    "phone": "243888888888",
     "isOnline": true,
     "lastActivity": "2026-02-13T10:35:00+00:00",
     "createdAt": "2026-02-13T10:30:00+00:00"
@@ -447,7 +447,7 @@ Liste tous les codes d'accès générés.
 POST /api/register
 {
   "fullName": "John Doe",
-  "phone": "243999999999+"
+  "phone": "243888888888"
 }
 ```
 
@@ -580,7 +580,7 @@ curl -X POST http://localhost:8080/api/register \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Test User",
-    "phone": "243999999999+"
+    "phone": "243888888888"
   }'
 ```
 
@@ -591,7 +591,7 @@ curl -X POST http://localhost:8080/api/payments/initiate \
   -d '{
     "email": "test@example.com",
     "fullName": "Test User",
-    "phone": "243999999999+",
+    "phone": "243888888888",
     "paymentMethod": "card"
   }'
 ```

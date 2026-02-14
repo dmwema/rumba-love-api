@@ -16,11 +16,11 @@ function makeRequest($url, $data) {
 }
 
 // Test 1: Paiement avec numéro de test (devrait réussir automatiquement)
-echo "Test 1: Paiement avec numéro de test (243999999999+)\n";
+echo "Test 1: Paiement avec numéro de test (243888888888)\n";
 $initData1 = [
     'email' => 'status-test@example.com',
     'fullName' => 'Status Test',
-    'phone' => '243999999999+',
+     'phone' => '243888888888',
     'paymentMethod' => 'mobile'
 ];
 $initResponse1 = makeRequest('http://localhost:8000/api/payments/initiate', $initData1);

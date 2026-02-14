@@ -176,12 +176,12 @@ class AdminController extends AbstractController
     #[Route('/payments', name: 'api_admin_payments', methods: ['GET'])]
     public function getPayments(): JsonResponse
     {
-        // Récupérer tous les paiements sauf ceux de test (avec numéro 243999999999+)
+         // Récupérer tous les paiements sauf ceux de test (avec numéro 243888888888)
         $qb = $this->entityManager->createQueryBuilder();
         $qb->select('p')
            ->from(Payment::class, 'p')
            ->where('p.phoneNumber != :testPhone')
-           ->setParameter('testPhone', '243999999999+')
+            ->setParameter('testPhone', '243888888888')
            ->orderBy('p.createdAt', 'DESC');
 
         $payments = $qb->getQuery()->getResult();
@@ -215,7 +215,7 @@ class AdminController extends AbstractController
            ->leftJoin('ac.user', 'u')
            ->leftJoin(Payment::class, 'p', 'WITH', 'p.user = u AND p.status = :successStatus')
            ->where('p.phoneNumber != :testPhone OR p.id IS NULL')
-           ->setParameter('testPhone', '243999999999+')
+            ->setParameter('testPhone', '243888888888')
            ->setParameter('successStatus', 'success')
            ->orderBy('ac.createdAt', 'DESC');
 
