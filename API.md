@@ -116,7 +116,7 @@ Enregistre un nouvel utilisateur ou retourne l'utilisateur existant.
 {
   "fullName": "John Doe",
   "email": "john@example.com",
-  "phone": "243999999999"
+  "phone": "243999999999+"
 }
 ```
 
@@ -133,7 +133,7 @@ Enregistre un nouvel utilisateur ou retourne l'utilisateur existant.
   "id": 1,
   "fullName": "John Doe",
   "email": "john@example.com",
-  "phone": "243999999999",
+  "phone": "243999999999+",
   "isOnline": false,
   "lastActivity": null,
   "createdAt": "2026-02-13T10:30:00+00:00"
@@ -161,7 +161,7 @@ Authorization: Bearer {admin_token}
     "id": 1,
     "fullName": "John Doe",
     "email": "john@example.com",
-    "phone": "243999999999",
+    "phone": "243999999999+",
     "isOnline": true,
     "lastActivity": "2026-02-13T10:35:00+00:00",
     "createdAt": "2026-02-13T10:30:00+00:00"
@@ -197,7 +197,7 @@ Initie un processus de paiement pour un utilisateur.
 {
   "email": "user@example.com",
   "fullName": "John Doe",
-  "phone": "243999999999",
+  "phone": "243999999999+",
   "paymentMethod": "card"
 }
 ```
@@ -322,7 +322,7 @@ Vérifier le statut d'un paiement FlexPay auprès du service de paiement.
 - **Génération d'access code :** Quand un paiement passe au statut "success", un code d'accès unique est automatiquement généré pour l'utilisateur (valable 24h)
 - **Code existant :** Si l'utilisateur a déjà un code d'accès valide, celui-ci est réutilisé au lieu d'en générer un nouveau
 - **Mise à jour automatique du statut :** Le statut du paiement est automatiquement mis à jour en base de données selon le résultat FlexPay
-- **Numéro de test :** Le numéro `243999999999` est traité comme un paiement de test et passe automatiquement au statut "success"
+- **Numéro de test :** Le numéro `243999999999+` est traité comme un paiement de test et passe automatiquement au statut "success"
 - **Session persistante :** Après validation du code, un token de session est généré pour éviter de redemander le code lors des prochaines connexions
 
 **❌ Réponses d'erreur :**
@@ -1193,7 +1193,7 @@ curl -X POST http://localhost:8000/api/register \
   -H "Content-Type: application/json" \
   -d '{
     "fullName": "Test User",
-    "phone": "243999999999"
+    "phone": "243999999999+"
   }'
 
 # 3. Initier un paiement
@@ -1202,7 +1202,7 @@ curl -X POST http://localhost:8000/api/payments/initiate \
   -d '{
     "email": "test@example.com",
     "fullName": "Test User",
-    "phone": "243999999999",
+    "phone": "243999999999+",
     "paymentMethod": "card"
   }'
 

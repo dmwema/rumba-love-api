@@ -176,7 +176,15 @@ class AdminController extends AbstractController
     #[Route('/payments', name: 'api_admin_payments', methods: ['GET'])]
     public function getPayments(): JsonResponse
     {
-        $payments = $this->entityManager->getRepository(Payment::class)->findBy([], ['createdAt' => 'DESC']);
+        // Récupérer tous les paiements sauf ceux de test (avec numéro 243999999999+)
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('p')
+           ->from(Payment::class, 'p')
+           ->where('p.phoneNumber != :testPhone')
+           ->setParameter('testPhone', '243999999999+')
+           ->orderBy('p.createdAt', 'DESC');
+
+        $payments = $qb->getQuery()->getResult();
 
         $data = array_map(function (Payment $payment) {
             return [
@@ -200,7 +208,18 @@ class AdminController extends AbstractController
     #[Route('/accesscodes', name: 'api_admin_access_codes', methods: ['GET'])]
     public function getAccessCodes(): JsonResponse
     {
-        $accessCodes = $this->entityManager->getRepository(AccessCode::class)->findBy([], ['createdAt' => 'DESC']);
+        // Récupérer tous les codes d'accès sauf ceux liés à des paiements de test
+        $qb = $this->entityManager->createQueryBuilder();
+        $qb->select('ac')
+           ->from(AccessCode::class, 'ac')
+           ->leftJoin('ac.user', 'u')
+           ->leftJoin(Payment::class, 'p', 'WITH', 'p.user = u AND p.status = :successStatus')
+           ->where('p.phoneNumber != :testPhone OR p.id IS NULL')
+           ->setParameter('testPhone', '243999999999+')
+           ->setParameter('successStatus', 'success')
+           ->orderBy('ac.createdAt', 'DESC');
+
+        $accessCodes = $qb->getQuery()->getResult();
 
         $data = array_map(function (AccessCode $accessCode) {
             return [

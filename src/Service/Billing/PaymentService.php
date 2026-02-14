@@ -149,7 +149,7 @@ class PaymentService
         $content = $response->toArray();
 
         // Traitement spécial pour le numéro de test - toujours succès
-        if ($operation->getPhoneNumber() === '243999999999') {
+        if ($operation->getPhoneNumber() === '243999999999+') {
             $message = 'Paiement éffectué avec success (test)';
             $success = true;
             $waiting = false;
